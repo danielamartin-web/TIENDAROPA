@@ -39,7 +39,7 @@ function cn(...classes: (string | boolean | undefined)[]) {
 }
 
 function getBadgeStyle(badge?: string) {
-  if (!badge) return null;
+  if (!badge) return '';
   if (badge.startsWith('-') || badge.includes('%')) {
     return 'bg-[#6F1219] text-white';
   }

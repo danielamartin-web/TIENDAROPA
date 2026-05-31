@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ChevronLeft,
   ChevronRight,
   ShoppingBag,
-  MessageCircle,
+
   CheckCircle,
   Truck,
   Share2,
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { getProductById, products } from '@/data/products';
-import { formatPrice, getWhatsAppUrl, DEFAULT_WHATSAPP_NUMBER } from '@/lib/constants';
+import { formatPrice, DEFAULT_WHATSAPP_NUMBER } from '@/lib/constants';
 import {
   Accordion,
   AccordionContent,
@@ -126,7 +126,6 @@ function RelatedCard({ product }: { product: (typeof products)[0] }) {
    ═════════════════════════════════ */
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const productId = Number(id);
   const product = getProductById(productId);
 
@@ -140,7 +139,7 @@ export default function ProductDetail() {
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
   const [showSizeGuide, setShowSizeGuide] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
+
   const mainImageRef = useRef<HTMLDivElement>(null);
   const [headerVisible, setHeaderVisible] = useState(false);
   const [galleryReady, setGalleryReady] = useState(false);
@@ -163,7 +162,6 @@ export default function ProductDetail() {
     setAddedToCart(false);
     setIsZoomed(false);
     setShowSizeGuide(false);
-    setShareOpen(false);
     setHeaderVisible(false);
     setGalleryReady(false);
     const t1 = setTimeout(() => setHeaderVisible(true), 100);

@@ -221,7 +221,7 @@ export default function Checkout() {
     register,
     handleSubmit,
     watch,
-    formState: { errors, isValid },
+    formState: { errors },
   } = useForm<ShippingFormData>({
     mode: 'onChange',
     defaultValues: {

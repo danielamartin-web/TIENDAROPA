@@ -5,7 +5,7 @@ import {
   Edit,
   Trash2,
   X,
-  Image,
+
   Video,
   ChevronLeft,
   ChevronRight,

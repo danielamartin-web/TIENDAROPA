@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Package,
@@ -636,7 +636,6 @@ function ProfileDisplay({
 type Tab = 'orders' | 'profile';
 
 export default function CustomerDashboard() {
-  const navigate = useNavigate();
   const { isAuthenticated, customerName, customerLogin } = useAuthStore();
   const [activeTab, setActiveTab] = useState<Tab>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
