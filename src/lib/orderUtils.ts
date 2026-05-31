@@ -73,7 +73,7 @@ export const DEFAULT_PROFILE: CustomerProfile = {
   firstName: 'Cliente',
   lastName: 'MARDA',
   email: 'cliente@marda.com',
-  phone: '+54 9 11 2345 6789',
+  phone: '+54 9 11 3919-9537',
   address: 'Av. Siempre Viva 123, 4B',
   city: 'Buenos Aires',
   province: 'CABA',
@@ -108,7 +108,7 @@ export const MOCK_ORDERS: Order[] = [
     total: 30997,
     customerName: 'Cliente MARDA',
     customerEmail: 'cliente@marda.com',
-    customerPhone: '+54 9 11 2345 6789',
+    customerPhone: '+54 9 11 3919-9537',
     shippingAddress: 'Av. Siempre Viva 123, 4B, Buenos Aires',
     timeline: [
       { label: 'Pedido recibido', date: '15/01/2025', completed: true, current: false },
@@ -150,7 +150,7 @@ export const MOCK_ORDERS: Order[] = [
     total: 28497,
     customerName: 'Cliente MARDA',
     customerEmail: 'cliente@marda.com',
-    customerPhone: '+54 9 11 2345 6789',
+    customerPhone: '+54 9 11 3919-9537',
     shippingAddress: 'Av. Siempre Viva 123, 4B, Buenos Aires',
     timeline: [
       { label: 'Pedido recibido', date: '20/02/2025', completed: true, current: false },
@@ -176,7 +176,7 @@ export const MOCK_ORDERS: Order[] = [
     total: 18999,
     customerName: 'Cliente MARDA',
     customerEmail: 'cliente@marda.com',
-    customerPhone: '+54 9 11 2345 6789',
+    customerPhone: '+54 9 11 3919-9537',
     shippingAddress: 'Av. Siempre Viva 123, 4B, Buenos Aires',
     timeline: [
       { label: 'Pedido recibido', date: '10/03/2025', completed: true, current: false },
@@ -309,5 +309,5 @@ export function getReorderWhatsAppLink(items: OrderItem[]): string {
     .join('\n');
   const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
   const message = `Hola MARDA! Quiero rehacer un pedido:\n${lineItems}\n\nTotal: ${formatPrice(total)}`;
-  return `https://wa.me/5491112345678?text=${encodeURIComponent(message)}`;
+  return `https://wa.me/5491139199537?text=${encodeURIComponent(message)}`;
 }
