@@ -4,7 +4,10 @@ export const STORE_TAGLINE = 'Ropa que te define';
 export const STORE_DESCRIPTION = 'MARDA - Tienda online de ropa interior y ropa juvenil para hombres y mujeres. Envios a todo el pais. Compra facil por WhatsApp.';
 
 // Default social links (configurable from admin)
-export const DEFAULT_WHATSAPP_NUMBER = '5491112345678';
+// Martín: +54 9 11 3919-9537 | Daniela: +54 9 11 7820-4224
+export const WHATSAPP_MARTIN = '5491139199537';
+export const WHATSAPP_DANIELA = '5491178204224';
+export const DEFAULT_WHATSAPP_NUMBER = WHATSAPP_MARTIN;
 export const DEFAULT_INSTAGRAM = 'marda.oficial';
 export const DEFAULT_FACEBOOK = 'mardaoficial';
 export const DEFAULT_TIKTOK = 'marda.oficial';
@@ -12,6 +15,10 @@ export const DEFAULT_TIKTOK = 'marda.oficial';
 // Social URLs
 export const getWhatsAppUrl = (number: string = DEFAULT_WHATSAPP_NUMBER) =>
   `https://wa.me/${number}`;
+export const getWhatsAppMartinUrl = (message?: string) =>
+  `https://wa.me/${WHATSAPP_MARTIN}${message ? `?text=${encodeURIComponent(message)}` : ''}`;
+export const getWhatsAppDanielaUrl = (message?: string) =>
+  `https://wa.me/${WHATSAPP_DANIELA}${message ? `?text=${encodeURIComponent(message)}` : ''}`;
 export const getInstagramUrl = (user: string = DEFAULT_INSTAGRAM) =>
   `https://instagram.com/${user}`;
 export const getFacebookUrl = (page: string = DEFAULT_FACEBOOK) =>

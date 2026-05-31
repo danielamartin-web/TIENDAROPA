@@ -37,14 +37,14 @@ const defaultSettings: AppSettings = {
   storeName: 'MARDA',
   tagline: 'Ropa que te define',
   logo: '',
-  whatsapp: '5491112345678',
+  whatsapp: '5491139199537',
   email: 'contacto@marda.com',
   address: 'Buenos Aires, Argentina',
   hours: 'Lunes a Viernes 9:00 - 18:00, Sabados 10:00 - 14:00',
   instagram: 'marda.oficial',
   facebook: 'mardaoficial',
   tiktok: 'marda.oficial',
-  whatsappNumber: '5491112345678',
+  whatsappNumber: '5491139199537',
   metaTitle: 'MARDA - Ropa Interior y Juvenil',
   metaDescription:
     'MARDA - Tienda online de ropa interior y ropa juvenil para hombres y mujeres. Envios a todo el pais. Compra facil por WhatsApp.',
@@ -176,7 +176,7 @@ export default function AdminSettings() {
             value={settings.whatsapp}
             onChange={(e) => updateField('whatsapp', e.target.value)}
             className="w-full h-[44px] pl-10 pr-4 bg-[#0F0F0F] border border-[#2A2A2A] rounded-lg text-white font-body text-sm focus:outline-none focus:border-[#6F1219] transition-colors"
-            placeholder="5491112345678"
+            placeholder="5491139199537"
           />
         </div>
       </div>
@@ -313,7 +313,7 @@ export default function AdminSettings() {
             value={settings.whatsappNumber}
             onChange={(e) => updateField('whatsappNumber', e.target.value)}
             className="w-full h-[44px] pl-10 pr-4 bg-[#0F0F0F] border border-[#2A2A2A] rounded-lg text-white font-body text-sm focus:outline-none focus:border-[#6F1219] transition-colors"
-            placeholder="5491112345678"
+            placeholder="5491139199537"
           />
         </div>
         <p className="font-body text-[11px] text-[#6B6B6B] mt-1">

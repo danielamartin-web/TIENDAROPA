@@ -646,7 +646,7 @@ function SocialSection() {
           }}
         >
           {[
-            { Icon: WhatsAppIcon, href: 'https://wa.me/5491112345678', label: 'WhatsApp' },
+            { Icon: WhatsAppIcon, href: 'https://wa.me/5491139199537', label: 'WhatsApp' },
             { Icon: InstagramIcon, href: 'https://instagram.com/marda.oficial', label: 'Instagram' },
             { Icon: FacebookIcon, href: 'https://facebook.com/mardaoficial', label: 'Facebook' },
             { Icon: TikTokIcon, href: 'https://tiktok.com/@marda.oficial', label: 'TikTok' },

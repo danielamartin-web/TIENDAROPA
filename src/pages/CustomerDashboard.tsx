@@ -447,7 +447,7 @@ function ProfileForm({ profile, onSave, onCancel }: ProfileFormProps) {
           value={form.phone}
           onChange={(e) => updateField('phone', e.target.value)}
           className={inputClass('phone')}
-          placeholder="+54 9 11 2345 6789"
+          placeholder="+54 9 11 3919-9537"
         />
         {errors.phone && (
           <p className="text-[#EF4444] text-xs font-body mt-1">{errors.phone}</p>
