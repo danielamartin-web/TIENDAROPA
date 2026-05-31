@@ -101,7 +101,7 @@ function RelatedCard({ product }: { product: (typeof products)[0] }) {
           src={product.images[0]}
           alt={product.name}
           loading="lazy"
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
         />
       </div>
       <h4 className="font-body text-[14px] text-[#1A1A1A] line-clamp-2 mb-1.5 leading-[1.4]">
@@ -388,7 +388,7 @@ export default function ProductDetail() {
                         <img
                           src={media}
                           alt={`${product.name} ${idx + 1}`}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover object-top"
                         />
                       )}
                     </button>
@@ -417,7 +417,7 @@ export default function ProductDetail() {
                       src={currentMedia}
                       alt={product.name}
                       className={cn(
-                        'w-full h-full object-cover transition-transform duration-500',
+                        'w-full h-full object-cover object-top transition-transform duration-500',
                         isZoomed && 'scale-150'
                       )}
                       style={
@@ -491,7 +491,7 @@ export default function ProductDetail() {
                           <img
                             src={media}
                             alt=""
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover object-top"
                           />
                         )}
                       </button>

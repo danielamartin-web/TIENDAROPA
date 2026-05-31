@@ -125,7 +125,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
             loading="lazy"
             onLoad={() => setImgLoaded(true)}
             className={cn(
-              'w-full h-full object-cover transition-transform duration-500 ease-out',
+              'w-full h-full object-cover object-top transition-transform duration-500 ease-out',
               isHovered && 'scale-105',
               imgLoaded ? 'opacity-100' : 'opacity-0'
             )}

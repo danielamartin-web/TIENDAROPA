@@ -56,10 +56,11 @@ function HeroSection() {
     >
       {/* Left - Men */}
       <div className="relative flex-1 min-h-[50dvh] md:min-h-full overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center transition-transform duration-[2000ms]"
+        <img
+          src="/hero-hombre.jpg"
+          alt="Hombre"
+          className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-[2000ms]"
           style={{
-            backgroundImage: 'url(/hero-hombre.jpg)',
             transform: loaded ? 'scale(1)' : 'scale(1.1)',
           }}
         />
@@ -97,10 +98,11 @@ function HeroSection() {
 
       {/* Right - Women */}
       <div className="relative flex-1 min-h-[50dvh] md:min-h-full overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center transition-transform duration-[2000ms]"
+        <img
+          src="/hero-mujer.jpg"
+          alt="Mujer"
+          className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-[2000ms]"
           style={{
-            backgroundImage: 'url(/hero-mujer.jpg)',
             transform: loaded ? 'scale(1)' : 'scale(1.1)',
           }}
         />
@@ -222,7 +224,7 @@ function CategoriesSection() {
             <Link
               key={cat.title}
               to={cat.link}
-              className="group relative overflow-hidden aspect-[3/4] block"
+              className="group relative overflow-hidden aspect-[2/3] block"
               style={{
                 opacity: visible ? 1 : 0,
                 transform: visible ? 'translateY(0)' : 'translateY(40px)',
@@ -232,7 +234,7 @@ function CategoriesSection() {
               <img
                 src={cat.image}
                 alt={cat.title}
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.08]"
+                className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.08]"
                 loading="lazy"
               />
               <div className="absolute inset-0 bg-[#1A1A1A]/0 group-hover:bg-[#1A1A1A]/50 transition-colors duration-300" />
@@ -317,7 +319,7 @@ function FeaturedProductsSection() {
                 <img
                   src={product.images[0]}
                   alt={product.name}
-                  className="w-full h-full object-cover transition-transform duration-400 group-hover:scale-105"
+                  className="w-full h-full object-cover object-top transition-transform duration-400 group-hover:scale-105"
                   loading="lazy"
                 />
                 {product.badge && (
@@ -407,9 +409,10 @@ function PromoBannerSection() {
       ref={sectionRef}
       className="relative h-[300px] md:h-[400px] overflow-hidden"
     >
-      <div
-        className="absolute inset-0 parallax-bg"
-        style={{ backgroundImage: 'url(/promo-banner.jpg)' }}
+      <img
+        src="/promo-banner.jpg"
+        alt="Promo especial"
+        className="absolute inset-0 w-full h-full object-cover object-center parallax-bg"
       />
       <div className="absolute inset-0 bg-[#1A1A1A]/75" />
       <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-6">
@@ -495,7 +498,7 @@ function AboutSection() {
               <img
                 src="/about-marda.jpg"
                 alt="Martin y Daniela - Fundadores de MARDA"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-center"
                 loading="lazy"
               />
             </div>
@@ -624,7 +627,7 @@ function SocialSection() {
               <img
                 src={img}
                 alt={`MARDA Instagram ${index + 1}`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-top"
                 loading="lazy"
               />
               <div className="absolute inset-0 bg-[#6F1219]/0 group-hover:bg-[#6F1219]/80 transition-colors duration-300 flex items-center justify-center">
