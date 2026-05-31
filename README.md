@@ -248,3 +248,4 @@ Place in `public/images/` directory:
 - Hero title supports multi-line via `\n` in the string
 - About sections alternate layout automatically (odd indices are reversed)
 - Shopping cart functionality is built into App.tsx
+# Force Vercel cache invalidation
