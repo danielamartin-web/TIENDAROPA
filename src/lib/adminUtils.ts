@@ -28,6 +28,12 @@ export function formatPrice(price: number): string {
   return `$${price.toLocaleString('es-AR')}`;
 }
 
+function csvEscape(value: unknown): string {
+  const s = value == null ? '' : String(value);
+  if (s === '') return '""';
+  return `"${s.replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
+}
+
 export function exportOrdersToCSV(orders: Order[]): string {
   const headers = ['Pedido', 'Fecha', 'Cliente', 'WhatsApp', 'Direccion', 'Productos', 'Total', 'Estado'];
   const rows = orders.map((o) => [
@@ -40,7 +46,10 @@ export function exportOrdersToCSV(orders: Order[]): string {
     o.total,
     statusLabels[o.status],
   ]);
-  return [headers.join(','), ...rows.map((r) => r.map((c) => `"${c}"`).join(','))].join('\n');
+  return [
+    headers.map(csvEscape).join(','),
+    ...rows.map((r) => r.map(csvEscape).join(',')),
+  ].join('\n');
 }
 
 export function downloadCSV(content: string, filename: string) {

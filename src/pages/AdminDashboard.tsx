@@ -30,14 +30,30 @@ export default function AdminDashboard() {
   const salesData = getLast7DaysSales();
 
   const totalProducts = products.length;
-  const todayOrders = orders.filter((o) => o.createdAt.includes(new Date().getDate().toString())).length || orders.length;
-  const monthOrders = orders.length;
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+  function parseOrderDate(o: { createdAtISO?: string; createdAt: string }): number {
+    if (o.createdAtISO) {
+      const t = Date.parse(o.createdAtISO);
+      if (!Number.isNaN(t)) return t;
+    }
+    const m = o.createdAt.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+    if (m) {
+      const [, dd, mm, yyyy, hh = '0', mi = '0'] = m;
+      return new Date(+yyyy, +mm - 1, +dd, +hh, +mi).getTime();
+    }
+    return 0;
+  }
+
+  const todayOrders = orders.filter((o) => parseOrderDate(o) >= startOfToday).length;
+  const monthOrders = orders.filter((o) => parseOrderDate(o) >= startOfMonth).length;
   const estimatedRevenue = orders.reduce((sum, o) => sum + o.total, 0);
 
-  // Low stock products
   const lowStockProducts = products.filter((p) => p.sizes.length < 3 || p.badge === '-20%').slice(0, 4);
 
-  // Recent orders
   const recentOrders = orders.slice(0, 5);
 
   const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) => {

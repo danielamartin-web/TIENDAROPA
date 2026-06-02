@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Clock, Mail, Phone } from 'lucide-react';
-import { STORE_NAME, STORE_TAGLINE, DEFAULT_ADDRESS, DEFAULT_HOURS, DEFAULT_EMAIL, DEFAULT_WHATSAPP_NUMBER, getInstagramUrl, getFacebookUrl, getTikTokUrl } from '@/lib/constants';
+import { MapPin, Clock, Mail, Phone, Check } from 'lucide-react';
+import { STORE_NAME, STORE_TAGLINE, DEFAULT_ADDRESS, DEFAULT_HOURS, DEFAULT_EMAIL, DEFAULT_WHATSAPP_NUMBER, getInstagramUrl, getFacebookUrl, getTikTokUrl, API_URL } from '@/lib/constants';
 
 // Inline social icons components
 function WhatsAppIcon({ size = 20 }: { size?: number }) {
@@ -36,9 +37,45 @@ function TikTokIcon({ size = 20 }: { size?: number }) {
 }
 
 export default function Footer() {
+  const [email, setEmail] = useState('');
+  const [subscribed, setSubscribed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Email invalido');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API_URL}/api/newsletter`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok && res.status !== 409) throw new Error('subscribe failed');
+      setSubscribed(true);
+      setEmail('');
+    } catch {
+      try {
+        const stored = JSON.parse(localStorage.getItem('marda-newsletter') || '[]') as string[];
+        if (!stored.includes(email)) stored.push(email);
+        localStorage.setItem('marda-newsletter', JSON.stringify(stored));
+        setSubscribed(true);
+        setEmail('');
+      } catch {
+        setError('No se pudo procesar. Intenta de nuevo.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <footer id="footer" className="bg-[#111111] text-white">
-      {/* Newsletter */}
       <div className="content-max-width py-16 md:py-20 border-b border-[#2A2A2A]">
         <div className="text-center max-w-xl mx-auto">
           <h3 className="font-display text-2xl md:text-4xl text-white mb-3">
@@ -47,22 +84,41 @@ export default function Footer() {
           <p className="font-body text-[#6B6B6B] text-sm md:text-base mb-6">
             Recibi descuentos exclusivos y las ultimas novedades.
           </p>
-          <form
-            className="flex flex-col sm:flex-row gap-3"
-            onSubmit={(e) => e.preventDefault()}
-          >
-            <input
-              type="email"
-              placeholder="Tu email"
-              className="flex-1 h-[52px] px-4 bg-[#2A2A2A] border border-[#3A3A3A] text-white font-body text-sm placeholder:text-[#6B6B6B] focus:outline-none focus:border-[#6F1219] focus:shadow-[0_0_0_3px_rgba(111,18,25,0.1)] transition-all"
-            />
-            <button
-              type="submit"
-              className="h-[52px] px-8 bg-[#6F1219] text-white font-body text-sm font-medium uppercase tracking-[1px] hover:bg-[#5A0E14] transition-colors"
+          {subscribed ? (
+            <div className="flex items-center justify-center gap-2 h-[52px] bg-[#1F1F1F] border border-[#22C55E]/30 text-[#22C55E] font-body text-sm">
+              <Check size={18} />
+              Listo. Te vamos a escribir pronto.
+            </div>
+          ) : (
+            <form
+              className="flex flex-col sm:flex-row gap-3"
+              onSubmit={handleNewsletterSubmit}
+              noValidate
             >
-              SUSCRIBIRME
-            </button>
-          </form>
+              <input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Tu email"
+                aria-label="Tu email"
+                aria-invalid={!!error}
+                className="flex-1 h-[52px] px-4 bg-[#2A2A2A] border border-[#3A3A3A] text-white font-body text-sm placeholder:text-[#6B6B6B] focus:outline-none focus:border-[#6F1219] focus:shadow-[0_0_0_3px_rgba(111,18,25,0.1)] transition-all"
+              />
+              <button
+                type="submit"
+                disabled={submitting}
+                className="h-[52px] px-8 bg-[#6F1219] text-white font-body text-sm font-medium uppercase tracking-[1px] hover:bg-[#5A0E14] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'ENVIANDO...' : 'SUSCRIBIRME'}
+              </button>
+            </form>
+          )}
+          {error && !subscribed && (
+            <p className="mt-3 font-body text-xs text-[#EF4444]">{error}</p>
+          )}
         </div>
       </div>
 

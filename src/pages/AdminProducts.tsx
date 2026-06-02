@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Search,
   Plus,
@@ -46,6 +46,16 @@ export default function AdminProducts() {
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      form.images.forEach((src) => {
+        if (src.startsWith('blob:')) URL.revokeObjectURL(src);
+      });
+      if (form.video && form.video.startsWith('blob:')) URL.revokeObjectURL(form.video);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Filter products
   const filtered = products.filter((p) => {
@@ -107,30 +117,51 @@ export default function AdminProducts() {
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files) return;
-    const newImages = Array.from(files).map(() => {
-      // In a real app, this would be a URL from the server
-      return URL.createObjectURL(files[0]);
-    });
+    if (!files || files.length === 0) return;
+    const MAX_BYTES = 5 * 1024 * 1024;
+    const valid = Array.from(files).filter((f) => f.type.startsWith('image/') && f.size <= MAX_BYTES);
+    if (valid.length === 0) {
+      toast.error('Solo imagenes hasta 5MB');
+      return;
+    }
+    const newImages = valid.map((file) => URL.createObjectURL(file));
     const unique = [...new Set([...form.images, ...newImages])].slice(0, 10);
     setForm((f) => ({ ...f, images: unique }));
+    e.target.value = '';
     toast.success(`${newImages.length} imagen(es) agregada(s)`);
   };
 
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || !files[0]) return;
+    if (!files[0].type.startsWith('video/')) {
+      toast.error('Solo archivos de video');
+      return;
+    }
+    if (files[0].size > 50 * 1024 * 1024) {
+      toast.error('Video maximo 50MB');
+      return;
+    }
+    if (form.video && form.video.startsWith('blob:')) URL.revokeObjectURL(form.video);
     const url = URL.createObjectURL(files[0]);
     setForm((f) => ({ ...f, video: url }));
+    e.target.value = '';
     toast.success('Video agregado');
   };
 
   const removeImage = (idx: number) => {
-    setForm((f) => ({ ...f, images: f.images.filter((_, i) => i !== idx) }));
+    setForm((f) => {
+      const target = f.images[idx];
+      if (target && target.startsWith('blob:')) URL.revokeObjectURL(target);
+      return { ...f, images: f.images.filter((_, i) => i !== idx) };
+    });
   };
 
   const removeVideo = () => {
-    setForm((f) => ({ ...f, video: undefined }));
+    setForm((f) => {
+      if (f.video && f.video.startsWith('blob:')) URL.revokeObjectURL(f.video);
+      return { ...f, video: undefined };
+    });
   };
 
   const toggleSize = (size: string) => {

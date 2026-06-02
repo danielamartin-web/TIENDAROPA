@@ -42,11 +42,13 @@ interface PromoCode {
   code: string;
   discount: number; // percentage, e.g. 10 = 10%
   type: 'percentage';
+  minSubtotal?: number;
+  validUntil?: string; // ISO date
 }
 
 const VALID_PROMOS: PromoCode[] = [
-  { code: 'MARDA10', discount: 10, type: 'percentage' },
-  { code: 'BIENVENIDO', discount: 15, type: 'percentage' },
+  { code: 'MARDA10', discount: 10, type: 'percentage', minSubtotal: 10000, validUntil: '2027-12-31' },
+  { code: 'BIENVENIDO', discount: 15, type: 'percentage', minSubtotal: 15000, validUntil: '2026-12-31' },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -97,13 +99,23 @@ export default function Cart() {
     if (!trimmed) return;
 
     const found = VALID_PROMOS.find((p) => p.code === trimmed);
-    if (found) {
-      setPromoApplied(found);
-      setPromoSuccess(`¡Codigo aplicado! ${found.discount}% de descuento`);
-    } else {
+    if (!found) {
       setPromoApplied(null);
-      setPromoError('Codigo invalido o expirado');
+      setPromoError('Codigo invalido');
+      return;
     }
+    if (found.validUntil && Date.now() > new Date(found.validUntil).getTime()) {
+      setPromoApplied(null);
+      setPromoError('Codigo expirado');
+      return;
+    }
+    if (found.minSubtotal && subtotal < found.minSubtotal) {
+      setPromoApplied(null);
+      setPromoError(`Monto minimo: ${formatPrice(found.minSubtotal)}`);
+      return;
+    }
+    setPromoApplied(found);
+    setPromoSuccess(`¡Codigo aplicado! ${found.discount}% de descuento`);
   };
 
   const handleRemovePromo = () => {

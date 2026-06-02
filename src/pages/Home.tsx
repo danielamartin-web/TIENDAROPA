@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getFeaturedProducts } from '@/data/products';
 import { useCartStore } from '@/store/cartStore';
 import { Instagram } from 'lucide-react';
+import SEO from '@/components/SEO';
 
 // Inline SVG icons for social media
 function WhatsAppIcon({ size = 20, className = '' }: { size?: number; className?: string }) {
@@ -677,6 +678,19 @@ function SocialSection() {
 export default function Home() {
   return (
     <div>
+      <SEO
+        title="MARDA - Ropa Interior y Juvenil Argentina"
+        description="Tienda online de ropa interior y ropa juvenil para hombres y mujeres. Envios a todo el pais. Lenceria, boxers, ropa urbana y accesorios. Compra facil por WhatsApp."
+        canonical="/"
+        image="/og-image.svg"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          name: 'MARDA - Inicio',
+          description: 'Ropa interior y ropa juvenil para hombres y mujeres en Argentina',
+          inLanguage: 'es-AR',
+        }}
+      />
       <HeroSection />
       <CategoriesSection />
       <FeaturedProductsSection />

@@ -6,6 +6,26 @@ import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/lib/constants';
 import type { Product } from '@/data/products';
 import type { Category } from '@/lib/constants';
+import SEO from '@/components/SEO';
+
+const CATEGORY_SEO: Record<string, { title: string; description: string }> = {
+  todos: {
+    title: 'Tienda MARDA - Catalogo Completo de Ropa Interior y Juvenil',
+    description: 'Explora todo el catalogo MARDA: lenceria, boxers, remeras, conjuntos y accesorios. Envios a toda Argentina.',
+  },
+  mujer: {
+    title: 'Ropa Mujer - Lenceria y Ropa Juvenil',
+    description: 'Lenceria, conjuntos, tops y ropa juvenil para mujer. Calidad premium, precios argentinos.',
+  },
+  hombre: {
+    title: 'Ropa Hombre - Boxers, Remeras y Ropa Urbana',
+    description: 'Boxers, packs, remeras oversize y ropa urbana masculina. Envios a todo el pais.',
+  },
+  accesorios: {
+    title: 'Accesorios MARDA - Gorras, Relojes y Mas',
+    description: 'Accesorios urbanos: gorras, relojes y complementos para tu look diario.',
+  },
+};
 
 /* ────────────────────────────────
    Shop Page - Catalogo completo
@@ -365,6 +385,7 @@ function FilterContent({
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
+  const searchParam = searchParams.get('search') ?? '';
 
   const selectedCategory = useShopStore((s) => s.selectedCategory);
   const searchQuery = useShopStore((s) => s.searchQuery);
@@ -379,7 +400,7 @@ export default function Shop() {
 
   const [sortValue, setSortValue] = useState<SortValue>('relevant');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [localSearch, setLocalSearch] = useState(searchParam || searchQuery);
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerVisible, setHeaderVisible] = useState(false);
 
@@ -391,6 +412,26 @@ export default function Shop() {
       setCategory('todos');
     }
   }, [categoryParam, setCategory]);
+
+  // Sync search FROM URL on first mount and on URL changes
+  useEffect(() => {
+    if (searchParam !== searchQuery) {
+      setSearchQuery(searchParam);
+      setLocalSearch(searchParam);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParam]);
+
+  // Sync search TO URL (debounced via the localSearch effect below)
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    if (searchQuery) params.set('search', searchQuery);
+    else params.delete('search');
+    const next = params.toString();
+    const current = searchParams.toString();
+    if (next !== current) setSearchParams(params, { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   // Debounced search
   useEffect(() => {
@@ -453,9 +494,23 @@ export default function Shop() {
     setCategory(value);
   };
 
+  const seoMeta = CATEGORY_SEO[selectedCategory] ?? CATEGORY_SEO.todos;
+
   return (
     <div className="min-h-[100dvh] bg-[#FAFAFA]">
-      {/* ── SEO ── */}
+      <SEO
+        title={seoMeta.title}
+        description={seoMeta.description}
+        canonical={selectedCategory === 'todos' ? '/shop' : `/shop?category=${selectedCategory}`}
+        image="/og-image.svg"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: seoMeta.title,
+          description: seoMeta.description,
+          inLanguage: 'es-AR',
+        }}
+      />
       <h1 className="sr-only">Tienda MARDA - Catalogo completo de ropa interior y juvenil</h1>
 
       {/* ── Toast ── */}

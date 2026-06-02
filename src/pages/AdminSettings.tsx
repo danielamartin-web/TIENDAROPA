@@ -79,19 +79,42 @@ const tabs: { key: TabKey; label: string; icon: typeof Store }[] = [
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
+  const [savedSnapshot, setSavedSnapshot] = useState<AppSettings>(() => loadSettings());
   const [activeTab, setActiveTab] = useState<TabKey>('general');
+  const [saving, setSaving] = useState(false);
+
+  const dirty = JSON.stringify(settings) !== JSON.stringify(savedSnapshot);
 
   useEffect(() => {
-    saveSettings(settings);
-  }, [settings]);
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty]);
 
   const updateField = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     setSettings((s) => ({ ...s, [key]: value }));
   };
 
   const handleSave = () => {
-    saveSettings(settings);
-    toast.success('Configuracion guardada');
+    if (saving) return;
+    setSaving(true);
+    try {
+      saveSettings(settings);
+      setSavedSnapshot(settings);
+      toast.success('Configuracion guardada');
+    } finally {
+      setTimeout(() => setSaving(false), 300);
+    }
+  };
+
+  const handleDiscard = () => {
+    setSettings(savedSnapshot);
+    toast.message('Cambios descartados');
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -437,13 +460,23 @@ export default function AdminSettings() {
             <div className="animate-fade-in">{renderContent()}</div>
 
             {/* Save Button */}
-            <div className="mt-8 pt-5 border-t border-[#2A2A2A] flex justify-end">
+            <div className="mt-8 pt-5 border-t border-[#2A2A2A] flex justify-end items-center gap-3">
+              {dirty && (
+                <button
+                  type="button"
+                  onClick={handleDiscard}
+                  className="px-5 py-3 font-body text-sm text-[#A1A1A1] hover:text-white border border-[#2A2A2A] rounded-lg transition-colors"
+                >
+                  Descartar
+                </button>
+              )}
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 px-6 py-3 bg-[#6F1219] text-white font-body text-sm font-medium rounded-lg hover:bg-[#5A0E14] transition-colors"
+                disabled={!dirty || saving}
+                className="flex items-center gap-2 px-6 py-3 bg-[#6F1219] text-white font-body text-sm font-medium rounded-lg hover:bg-[#5A0E14] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save size={16} />
-                Guardar Cambios
+                {saving ? 'Guardando...' : dirty ? 'Guardar Cambios' : 'Sin cambios'}
               </button>
             </div>
           </div>
