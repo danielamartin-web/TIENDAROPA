@@ -57,6 +57,15 @@ export async function apiRequest<T = unknown>(path: string, opts: RequestOptions
   const data = ct.includes('application/json') ? await res.json().catch(() => null) : null;
 
   if (!res.ok) {
+    // 401 en endpoint auth: token invalido/expirado → notificar para logout global.
+    // No disparamos en /api/auth/login porque ese 401 = credenciales malas, no sesion muerta.
+    if (res.status === 401 && opts.auth && !path.includes('/api/auth/login')) {
+      try {
+        window.dispatchEvent(new CustomEvent('marda:auth-expired'));
+      } catch {
+        // SSR / no-window — ignorar
+      }
+    }
     const message =
       (data && typeof data === 'object' && 'error' in (data as object) && String((data as { error: unknown }).error)) ||
       `HTTP ${res.status}`;
