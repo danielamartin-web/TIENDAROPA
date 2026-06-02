@@ -34,18 +34,31 @@ export const useAuthStore = create<AuthState>()(
       token: null,
 
       login: (username, password) => {
-        if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-          const token = generateToken(username);
+        // Trim and validate
+        const cleanUsername = username.trim().toLowerCase();
+        const cleanPassword = password.trim();
+        
+        if (cleanUsername === ADMIN_USERNAME && cleanPassword === ADMIN_PASSWORD) {
+          const token = generateToken(cleanUsername);
           set({
             isAuthenticated: true,
             isAdmin: true,
             isCustomer: false,
-            username,
+            username: cleanUsername,
             customerName: null,
             token,
           });
           return true;
         }
+        // Ensure state is clean on failed login
+        set({
+          isAuthenticated: false,
+          isAdmin: false,
+          isCustomer: false,
+          username: null,
+          customerName: null,
+          token: null,
+        });
         return false;
       },
 
@@ -61,7 +74,11 @@ export const useAuthStore = create<AuthState>()(
         });
       },
 
-      logout: () =>
+      logout: () => {
+        // Clear persisted storage
+        localStorage.removeItem('marda-auth');
+        localStorage.removeItem('marda-cart');
+        localStorage.removeItem('marda_orders');
         set({
           isAuthenticated: false,
           isAdmin: false,
@@ -69,7 +86,8 @@ export const useAuthStore = create<AuthState>()(
           username: null,
           customerName: null,
           token: null,
-        }),
+        });
+      },
     }),
     {
       name: 'marda-auth',

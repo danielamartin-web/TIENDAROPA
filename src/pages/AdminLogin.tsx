@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { STORE_NAME } from '@/lib/constants';
-import { User, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('');
@@ -10,10 +10,42 @@ export default function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [shake, setShake] = useState(false);
+  const [showRecovery, setShowRecovery] = useState(false);
   const login = useAuthStore((s) => s.login);
+  const logout = useAuthStore((s) => s.logout);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isAdmin = useAuthStore((s) => s.isAdmin);
   const navigate = useNavigate();
+
+  // Clear any corrupted localStorage on mount
+  useEffect(() => {
+    // Check for corrupted auth state
+    try {
+      const authData = localStorage.getItem('marda-auth');
+      if (authData) {
+        const parsed = JSON.parse(authData);
+        // If token is expired or data is malformed, clear it
+        if (parsed?.state?.token) {
+          try {
+            const payload = JSON.parse(atob(parsed.state.token));
+            if (payload.exp && payload.exp < Date.now()) {
+              logout();
+            }
+          } catch {
+            // Invalid token format, clear everything
+            localStorage.removeItem('marda-auth');
+            logout();
+          }
+        }
+      }
+    } catch {
+      // If anything is corrupted, clear all app storage
+      localStorage.removeItem('marda-auth');
+      localStorage.removeItem('marda-cart');
+      localStorage.removeItem('marda_orders');
+      localStorage.removeItem('marda_settings');
+    }
+  }, [logout]);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -25,14 +57,30 @@ export default function AdminLogin() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const success = login(username, password);
+    const success = login(username.trim(), password);
     if (success) {
       navigate('/admin/dashboard');
     } else {
-      setError('Usuario o contrasena incorrectos');
+      setError('Usuario o contrasena incorrectos. Intente de nuevo.');
       setShake(true);
-      setTimeout(() => setShake(false), 300);
+      setTimeout(() => setShake(false), 500);
     }
+  };
+
+  const handleRecovery = () => {
+    // Clear all localStorage data
+    localStorage.removeItem('marda-auth');
+    localStorage.removeItem('marda-cart');
+    localStorage.removeItem('marda_orders');
+    localStorage.removeItem('marda_settings');
+    logout();
+    setShowRecovery(false);
+    setError('');
+    setUsername('');
+    setPassword('');
+    // Show success message
+    alert('Datos limpiados. Intente ingresar nuevamente con las credenciales.');
+    window.location.reload();
   };
 
   return (
@@ -128,9 +176,36 @@ export default function AdminLogin() {
           </form>
         </div>
 
+        {/* Recovery Button */}
+        <button
+          type="button"
+          onClick={() => setShowRecovery(!showRecovery)}
+          className="w-full mt-4 text-center font-body text-[12px] text-[#6B6B6B] hover:text-[#D4A574] transition-colors"
+        >
+          {showRecovery ? 'Ocultar opciones' : 'No podes ingresar? Click aqui'}
+        </button>
+
+        {showRecovery && (
+          <div className="mt-4 p-4 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl animate-fade-up">
+            <div className="flex items-start gap-3 mb-3">
+              <AlertTriangle size={16} className="text-[#D4A574] mt-0.5 flex-shrink-0" />
+              <p className="font-body text-[12px] text-[#A1A1A1]">
+                Si tenes problemas para ingresar, limpia los datos guardados e intenta de nuevo.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleRecovery}
+              className="w-full h-[40px] border border-[#6F1219] text-[#6F1219] font-body text-[12px] font-medium uppercase tracking-[1px] hover:bg-[#6F1219] hover:text-white transition-colors rounded-lg"
+            >
+              Limpiar datos y reintentar
+            </button>
+          </div>
+        )}
+
         {/* Hint */}
         <p className="text-center mt-6 font-body text-[12px] text-[#6B6B6B]">
-          Credenciales: mardadmin / Marda2025!
+          Usuario: <span className="text-[#D4A574]">mardadmin</span> | Contrasena: <span className="text-[#D4A574]">Marda2025!</span>
         </p>
       </div>
 
