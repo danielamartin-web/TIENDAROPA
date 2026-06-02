@@ -175,6 +175,16 @@ export default function ProductDetail() {
     };
   }, [productId]);
 
+  // Clamp quantity to stock when size changes
+  useEffect(() => {
+    if (!product || !selectedSize) return;
+    const sizeStock = product.stockBySize?.[selectedSize];
+    if (sizeStock !== undefined && quantity > sizeStock) {
+      setQuantity(Math.max(1, sizeStock));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSize, product?.id]);
+
 
   // Keyboard navigation for images
   useEffect(() => {
@@ -214,6 +224,15 @@ export default function ProductDetail() {
       toast.error('Selecciona una talla primero');
       return;
     }
+    const sizeStock = product.stockBySize?.[selectedSize];
+    if (sizeStock !== undefined && sizeStock <= 0) {
+      toast.error('Talle sin stock');
+      return;
+    }
+    if (sizeStock !== undefined && quantity > sizeStock) {
+      toast.error(`Solo hay ${sizeStock} disponible(s) para ese talle`);
+      return;
+    }
     addItem({
       productId: product.id,
       name: product.name,
@@ -221,6 +240,7 @@ export default function ProductDetail() {
       size: selectedSize,
       image: product.images[0],
       quantity,
+      maxStock: sizeStock,
     });
     setAddedToCart(true);
     toast.success(`${product.name} agregado al carrito`, {
@@ -606,22 +626,38 @@ export default function ProductDetail() {
               <div className="flex flex-wrap gap-2">
                 {product.sizes.map((size) => {
                   const isSelected = selectedSize === size;
+                  const stock = product.stockBySize?.[size];
+                  const hasStockTracking = product.stockBySize && Object.keys(product.stockBySize).length > 0;
+                  const isOutOfStock = hasStockTracking && (stock ?? 0) <= 0;
                   return (
                     <button
                       key={size}
-                      onClick={() => setSelectedSize(size)}
+                      onClick={() => !isOutOfStock && setSelectedSize(size)}
+                      disabled={isOutOfStock}
                       className={cn(
                         'min-w-[52px] h-[44px] px-4 rounded-full border font-body text-[14px] font-medium transition-all duration-200',
-                        isSelected
+                        isOutOfStock
+                          ? 'bg-[#F5F5F5] text-[#C5C5C5] border-[#E5E5E5] cursor-not-allowed line-through'
+                          : isSelected
                           ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
                           : 'bg-transparent text-[#1A1A1A] border-[#E5E5E5] hover:border-[#1A1A1A]'
                       )}
+                      title={isOutOfStock ? 'Sin stock' : undefined}
                     >
                       {size}
                     </button>
                   );
                 })}
               </div>
+              {selectedSize && product.stockBySize?.[selectedSize] !== undefined && (
+                <p className={`font-body text-[12px] mt-2 ${
+                  (product.stockBySize[selectedSize] ?? 0) <= 3 ? 'text-[#F59E0B]' : 'text-[#6B6B6B]'
+                }`}>
+                  {(product.stockBySize[selectedSize] ?? 0) <= 3
+                    ? `Solo ${product.stockBySize[selectedSize]} disponible(s)`
+                    : `${product.stockBySize[selectedSize]} disponibles`}
+                </p>
+              )}
               {!selectedSize && (
                 <p className="font-body text-[12px] text-[#EF4444] mt-2">
                   Selecciona una talla para continuar
@@ -646,8 +682,17 @@ export default function ProductDetail() {
                   {quantity}
                 </span>
                 <button
-                  onClick={() => setQuantity((q) => Math.min(10, q + 1))}
-                  className="w-11 h-11 flex items-center justify-center text-[#1A1A1A] hover:bg-[#F5F5F5] transition-colors"
+                  onClick={() => {
+                    const sizeStock = selectedSize ? product.stockBySize?.[selectedSize] : undefined;
+                    const maxQty = sizeStock !== undefined ? Math.min(10, sizeStock) : 10;
+                    setQuantity((q) => Math.min(maxQty, q + 1));
+                  }}
+                  disabled={(() => {
+                    const sizeStock = selectedSize ? product.stockBySize?.[selectedSize] : undefined;
+                    const maxQty = sizeStock !== undefined ? Math.min(10, sizeStock) : 10;
+                    return quantity >= maxQty;
+                  })()}
+                  className="w-11 h-11 flex items-center justify-center text-[#1A1A1A] hover:bg-[#F5F5F5] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   aria-label="Aumentar cantidad"
                 >
                   <Plus size={16} />

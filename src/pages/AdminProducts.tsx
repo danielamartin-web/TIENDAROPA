@@ -26,6 +26,7 @@ const emptyProduct: ProductInput = {
   originalPrice: null,
   category: 'hombre',
   sizes: [],
+  stockBySize: {},
   images: [],
   video: undefined,
   inStock: true,
@@ -92,6 +93,7 @@ export default function AdminProducts() {
       originalPrice: product.originalPrice,
       category: product.category,
       sizes: product.sizes,
+      stockBySize: product.stockBySize ?? {},
       images: product.images,
       video: product.video,
       inStock: product.inStock,
@@ -204,11 +206,33 @@ export default function AdminProducts() {
   };
 
   const toggleSize = (size: string) => {
+    setForm((f) => {
+      const enabled = f.sizes.includes(size);
+      if (enabled) {
+        const { [size]: _drop, ...rest } = f.stockBySize ?? {};
+        void _drop;
+        return { ...f, sizes: f.sizes.filter((s) => s !== size), stockBySize: rest };
+      }
+      return {
+        ...f,
+        sizes: [...f.sizes, size],
+        stockBySize: { ...(f.stockBySize ?? {}), [size]: 0 },
+      };
+    });
+  };
+
+  const updateSizeStock = (size: string, raw: string) => {
+    const n = raw === '' ? 0 : Math.max(0, Math.min(100000, Math.floor(Number(raw) || 0)));
     setForm((f) => ({
       ...f,
-      sizes: f.sizes.includes(size) ? f.sizes.filter((s) => s !== size) : [...f.sizes, size],
+      stockBySize: { ...(f.stockBySize ?? {}), [size]: n },
     }));
   };
+
+  const totalStock = (form.sizes ?? []).reduce(
+    (sum, s) => sum + ((form.stockBySize ?? {})[s] ?? 0),
+    0
+  );
 
   return (
     <AdminLayout title="Productos">
@@ -488,8 +512,16 @@ export default function AdminProducts() {
               </div>
 
               <div>
-                <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">Tallas disponibles</label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="font-body text-[13px] text-[#A1A1A1]">Tallas y stock</label>
+                  <span className="font-mono text-[11px] text-[#6B6B6B]">
+                    Stock total: <span className={totalStock === 0 ? 'text-[#EF4444]' : 'text-[#22C55E]'}>{totalStock}</span>
+                  </span>
+                </div>
+                <p className="font-body text-[11px] text-[#6B6B6B] mb-3">
+                  Tocar una talla para activarla. Cargar la cantidad disponible al lado.
+                </p>
+                <div className="flex flex-wrap gap-2 mb-3">
                   {AVAILABLE_SIZES.map((size) => (
                     <button
                       key={size}
@@ -505,6 +537,41 @@ export default function AdminProducts() {
                     </button>
                   ))}
                 </div>
+                {form.sizes.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-[#0F0F0F] border border-[#2A2A2A] rounded-lg">
+                    {form.sizes.map((size) => {
+                      const stock = (form.stockBySize ?? {})[size] ?? 0;
+                      const low = stock > 0 && stock <= 3;
+                      const empty = stock === 0;
+                      return (
+                        <div key={size} className="flex items-center gap-2">
+                          <span className={`min-w-[32px] inline-flex items-center justify-center h-9 px-2 rounded-lg font-body text-[12px] font-medium border ${
+                            empty ? 'bg-[#EF4444]/10 border-[#EF4444]/40 text-[#EF4444]' : low ? 'bg-[#F59E0B]/10 border-[#F59E0B]/40 text-[#F59E0B]' : 'bg-[#22C55E]/10 border-[#22C55E]/40 text-[#22C55E]'
+                          }`}>
+                            {size}
+                          </span>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            max={100000}
+                            step={1}
+                            value={stock || ''}
+                            onChange={(e) => updateSizeStock(size, e.target.value)}
+                            placeholder="0"
+                            className="flex-1 h-9 px-3 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-white font-mono text-[13px] focus:outline-none focus:border-[#6F1219] transition-colors placeholder:text-[#3A3A3A]"
+                            aria-label={`Stock para talle ${size}`}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {form.sizes.length === 0 && (
+                  <p className="font-body text-[11px] text-[#F59E0B] mt-2">
+                    Sin tallas seleccionadas — el producto se mostrara como agotado en la tienda.
+                  </p>
+                )}
               </div>
 
               <div>
