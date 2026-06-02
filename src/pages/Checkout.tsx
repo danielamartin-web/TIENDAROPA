@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useCartStore } from '@/store/cartStore';
+import { useOrderStore } from '@/store/orderStore';
 import {
   ChevronRight,
   ChevronLeft,
@@ -39,24 +40,6 @@ interface ShippingFormData {
   notes: string;
 }
 
-interface SavedOrder {
-  id: string;
-  date: string;
-  items: CartItem[];
-  total: number;
-  shipping: number;
-  status: string;
-  customer: {
-    fullName: string;
-    phone: string;
-    email: string;
-    address: string;
-    city: string;
-    province: string;
-    zipCode: string;
-  };
-  deliveryMethod: string;
-}
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -96,23 +79,6 @@ const SHIPPING_THRESHOLD = 30000;
 /*  Helper functions                                                   */
 /* ------------------------------------------------------------------ */
 
-function generateOrderId(): string {
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-  return `MARDA-${timestamp}${random}`;
-}
-
-function saveOrderToLocalStorage(order: SavedOrder): void {
-  try {
-    const existing = JSON.parse(
-      localStorage.getItem('marda-orders') || '[]'
-    ) as SavedOrder[];
-    existing.unshift(order);
-    localStorage.setItem('marda-orders', JSON.stringify(existing));
-  } catch {
-    // silently fail
-  }
-}
 
 function buildWhatsAppMessage(
   items: CartItem[],
@@ -213,9 +179,17 @@ function StepIndicator({
 export default function Checkout() {
   const navigate = useNavigate();
   const { items, getTotalPrice, clearCart } = useCartStore();
+  const addOrder = useOrderStore((s) => s.addOrder);
   const [step, setStep] = useState(0);
   const [orderId, setOrderId] = useState('');
   const [animateIn, setAnimateIn] = useState(false);
+  const [snapshot, setSnapshot] = useState<{
+    items: CartItem[];
+    subtotal: number;
+    shipping: number;
+    total: number;
+    customer: ShippingFormData;
+  } | null>(null);
 
   const {
     register,
@@ -281,52 +255,60 @@ export default function Checkout() {
   };
 
   const handleConfirmOrder = () => {
-    const newOrderId = generateOrderId();
-    setOrderId(newOrderId);
-
-    // Save order to localStorage
-    const order: SavedOrder = {
-      id: newOrderId,
-      date: new Date().toISOString(),
-      items: [...items],
+    const itemsSnapshot = [...items];
+    const created = addOrder({
+      customerName: formData.fullName,
+      whatsapp: formData.phone,
+      email: formData.email,
+      address: `${formData.address}, ${formData.city}, ${formData.province} (CP ${formData.zipCode})`,
+      items: itemsSnapshot.map((i) => ({
+        productId: i.productId,
+        name: i.name,
+        price: i.price,
+        quantity: i.quantity,
+        size: i.size,
+        image: i.image,
+      })),
       total,
-      shipping: shippingCost,
-      status: 'Pendiente',
-      customer: {
-        fullName: formData.fullName,
-        phone: formData.phone,
-        email: formData.email,
-        address: formData.address,
-        city: formData.city,
-        province: formData.province,
-        zipCode: formData.zipCode,
-      },
-      deliveryMethod: formData.deliveryMethod,
-    };
-    saveOrderToLocalStorage(order);
+      status: 'pendiente',
+      notes: formData.notes,
+    });
 
-    // Open WhatsApp
+    setOrderId(created.id);
+    setSnapshot({
+      items: itemsSnapshot,
+      subtotal,
+      shipping: shippingCost,
+      total,
+      customer: { ...formData },
+    });
+
     const message = buildWhatsAppMessage(
-      items,
+      itemsSnapshot,
       subtotal,
       shippingCost,
       total,
       formData,
-      newOrderId,
+      created.id,
       formData.deliveryMethod
     );
     const url = `https://wa.me/${DEFAULT_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    window.open(url, '_blank', 'noopener,noreferrer');
 
-    // Clear cart and move to confirmation
-    clearCart();
     setStep(2);
+    clearCart();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   /* ==================== STEP 2: CONFIRMATION ==================== */
 
   if (step === 2) {
+    const snap = snapshot;
+    const showSubtotal = snap?.subtotal ?? subtotal;
+    const showShipping = snap?.shipping ?? shippingCost;
+    const showTotal = snap?.total ?? total;
+    const showCustomer = snap?.customer ?? formData;
+
     return (
       <main className="pt-[72px] min-h-[100dvh] bg-[#FAFAFA]">
         <div className="content-max-width py-12 md:py-20">
@@ -337,7 +319,6 @@ export default function Checkout() {
               animateIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}
           >
-            {/* Success icon */}
             <div
               className="w-20 h-20 rounded-full bg-[#22C55E]/10 flex items-center justify-center mx-auto mb-6"
               style={{
@@ -358,7 +339,6 @@ export default function Checkout() {
               contacto con vos para confirmar.
             </p>
 
-            {/* Order ID */}
             <div className="bg-[#FAFAFA] p-4 mb-6">
               <p className="font-body text-xs text-[#6B6B6B] uppercase tracking-wider mb-1">
                 Numero de pedido
@@ -368,7 +348,6 @@ export default function Checkout() {
               </p>
             </div>
 
-            {/* Order summary card */}
             <div className="bg-[#FAFAFA] p-5 text-left mb-6">
               <h3 className="font-body text-sm font-medium text-[#1A1A1A] mb-3">
                 Resumen del pedido
@@ -376,33 +355,32 @@ export default function Checkout() {
               <div className="space-y-2">
                 <div className="flex justify-between font-body text-sm">
                   <span className="text-[#6B6B6B]">Subtotal</span>
-                  <span className="text-[#1A1A1A]">{formatPrice(subtotal)}</span>
+                  <span className="text-[#1A1A1A]">{formatPrice(showSubtotal)}</span>
                 </div>
                 <div className="flex justify-between font-body text-sm">
                   <span className="text-[#6B6B6B]">Envio</span>
-                  <span className={shippingCost === 0 ? 'text-[#22C55E]' : 'text-[#1A1A1A]'}>
-                    {shippingCost === 0 ? 'Gratis' : formatPrice(shippingCost)}
+                  <span className={showShipping === 0 ? 'text-[#22C55E]' : 'text-[#1A1A1A]'}>
+                    {showShipping === 0 ? 'Gratis' : formatPrice(showShipping)}
                   </span>
                 </div>
                 <div className="border-t border-[#E5E5E5] pt-2 flex justify-between font-body text-base font-medium">
                   <span className="text-[#1A1A1A]">Total</span>
-                  <span className="text-[#6F1219]">{formatPrice(total)}</span>
+                  <span className="text-[#6F1219]">{formatPrice(showTotal)}</span>
                 </div>
               </div>
 
-              {/* Customer data summary */}
               <div className="mt-4 pt-4 border-t border-[#E5E5E5]">
                 <p className="font-body text-xs text-[#6B6B6B] uppercase tracking-wider mb-2">
                   Datos de envio
                 </p>
                 <p className="font-body text-sm text-[#1A1A1A]">
-                  {formData.fullName}
+                  {showCustomer.fullName}
                 </p>
                 <p className="font-body text-sm text-[#6B6B6B]">
-                  {formData.address}, {formData.city}, {formData.province}
+                  {showCustomer.address}, {showCustomer.city}, {showCustomer.province}
                 </p>
                 <p className="font-body text-sm text-[#6B6B6B]">
-                  CP: {formData.zipCode}
+                  CP: {showCustomer.zipCode}
                 </p>
               </div>
             </div>

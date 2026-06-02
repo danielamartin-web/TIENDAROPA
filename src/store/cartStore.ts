@@ -12,12 +12,18 @@ export interface CartItem {
 
 interface CartState {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, 'quantity'>) => void;
+  addItem: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void;
   removeItem: (productId: number, size: string) => void;
   updateQuantity: (productId: number, size: string, quantity: number) => void;
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
+}
+
+const MAX_QUANTITY_PER_LINE = 20;
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
 }
 
 export const useCartStore = create<CartState>()(
@@ -26,6 +32,7 @@ export const useCartStore = create<CartState>()(
       items: [],
 
       addItem: (item) => {
+        const incomingQty = clamp(item.quantity ?? 1, 1, MAX_QUANTITY_PER_LINE);
         set((state) => {
           const existing = state.items.find(
             (i) => i.productId === item.productId && i.size === item.size
@@ -34,12 +41,14 @@ export const useCartStore = create<CartState>()(
             return {
               items: state.items.map((i) =>
                 i.productId === item.productId && i.size === item.size
-                  ? { ...i, quantity: i.quantity + 1 }
+                  ? { ...i, quantity: clamp(i.quantity + incomingQty, 1, MAX_QUANTITY_PER_LINE) }
                   : i
               ),
             };
           }
-          return { items: [...state.items, { ...item, quantity: 1 }] };
+          const { quantity: _drop, ...rest } = item;
+          void _drop;
+          return { items: [...state.items, { ...rest, quantity: incomingQty }] };
         });
       },
 
@@ -56,24 +65,18 @@ export const useCartStore = create<CartState>()(
           get().removeItem(productId, size);
           return;
         }
+        const next = clamp(quantity, 1, MAX_QUANTITY_PER_LINE);
         set((state) => ({
           items: state.items.map((i) =>
-            i.productId === productId && i.size === size
-              ? { ...i, quantity }
-              : i
+            i.productId === productId && i.size === size ? { ...i, quantity: next } : i
           ),
         }));
       },
 
       clearCart: () => set({ items: [] }),
 
-      getTotalItems: () => {
-        return get().items.reduce((sum, i) => sum + i.quantity, 0);
-      },
-
-      getTotalPrice: () => {
-        return get().items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-      },
+      getTotalItems: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
+      getTotalPrice: () => get().items.reduce((sum, i) => sum + i.price * i.quantity, 0),
     }),
     {
       name: 'marda-cart',

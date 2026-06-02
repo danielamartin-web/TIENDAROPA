@@ -17,7 +17,8 @@ import {
 } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { getProductById, products } from '@/data/products';
-import { formatPrice, DEFAULT_WHATSAPP_NUMBER } from '@/lib/constants';
+import { formatPrice, DEFAULT_WHATSAPP_NUMBER, SITE_URL } from '@/lib/constants';
+import SEO from '@/components/SEO';
 import {
   Accordion,
   AccordionContent,
@@ -51,45 +52,40 @@ function WhatsAppIcon({ size = 18 }: { size?: number }) {
   );
 }
 
-/* ─── Schema.org Product markup ─── */
-function ProductSchema({
-  name,
-  price,
-  description,
-  image,
-  inStock,
-}: {
+function buildProductSchema(opts: {
+  id: number;
   name: string;
   price: number;
+  originalPrice: number | null;
   description: string;
   image: string;
+  category: string;
   inStock: boolean;
+  sizes: string[];
 }) {
-  const schema = {
+  const absImage = opts.image.startsWith('http') ? opts.image : `${SITE_URL}${opts.image}`;
+  return {
     '@context': 'https://schema.org',
     '@type': 'Product',
-    name,
-    description,
-    image: window.location.origin + image,
+    '@id': `${SITE_URL}/product/${opts.id}`,
+    name: opts.name,
+    description: opts.description,
+    image: absImage,
+    sku: `MARDA-${opts.id}`,
+    mpn: `MARDA-${opts.id}`,
+    category: opts.category,
+    brand: { '@type': 'Brand', name: 'MARDA' },
     offers: {
       '@type': 'Offer',
+      url: `${SITE_URL}/product/${opts.id}`,
       priceCurrency: 'ARS',
-      price: price.toString(),
-      availability: inStock
-        ? 'https://schema.org/InStock'
-        : 'https://schema.org/OutOfStock',
-      seller: {
-        '@type': 'Organization',
-        name: 'MARDA',
-      },
+      price: opts.price,
+      ...(opts.originalPrice && opts.originalPrice > opts.price ? { priceSpecification: { '@type': 'UnitPriceSpecification', price: opts.price, priceCurrency: 'ARS', referencePrice: opts.originalPrice } } : {}),
+      availability: opts.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      itemCondition: 'https://schema.org/NewCondition',
+      seller: { '@type': 'Organization', name: 'MARDA' },
     },
   };
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-    />
-  );
 }
 
 /* ─── Related Product Card ─── */
@@ -173,18 +169,6 @@ export default function ProductDetail() {
     };
   }, [productId]);
 
-  // SEO
-  useEffect(() => {
-    if (product) {
-      document.title = `${product.name} - MARDA`;
-      const meta = document.querySelector('meta[name="description"]');
-      if (meta) {
-        meta.setAttribute('content', product.description);
-      }
-    } else {
-      document.title = 'Producto no encontrado - MARDA';
-    }
-  }, [product]);
 
   // Keyboard navigation for images
   useEffect(() => {
@@ -309,13 +293,23 @@ export default function ProductDetail() {
 
   return (
     <div className="min-h-[100dvh] bg-white">
-      {/* Schema.org markup */}
-      <ProductSchema
-        name={product.name}
-        price={product.price}
+      <SEO
+        title={`${product.name} - MARDA`}
         description={product.description}
+        canonical={`/product/${product.id}`}
         image={product.images[0]}
-        inStock={product.inStock}
+        type="product"
+        jsonLd={buildProductSchema({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          originalPrice: product.originalPrice,
+          description: product.description,
+          image: product.images[0],
+          category: product.category,
+          inStock: product.inStock,
+          sizes: product.sizes,
+        })}
       />
 
       {/* ═══ BREADCRUMB ═══ */}

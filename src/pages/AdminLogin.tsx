@@ -10,26 +10,28 @@ export default function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [shake, setShake] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const login = useAuthStore((s) => s.login);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isAdmin = useAuthStore((s) => s.isAdmin);
   const navigate = useNavigate();
 
-  // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated && isAdmin) {
       navigate('/admin/dashboard');
     }
   }, [isAuthenticated, isAdmin, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const success = login(username, password);
+    setSubmitting(true);
+    const success = await login(username, password);
+    setSubmitting(false);
     if (success) {
       navigate('/admin/dashboard');
     } else {
-      setError('Usuario o contrasena incorrectos');
+      setError(useAuthStore.getState().loginError ?? 'Usuario o contrasena incorrectos');
       setShake(true);
       setTimeout(() => setShake(false), 300);
     }
@@ -81,7 +83,7 @@ export default function AdminLogin() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full h-[48px] pl-10 pr-4 bg-[#0F0F0F] border border-[#2A2A2A] rounded-lg text-white font-body text-sm focus:outline-none focus:border-[#6F1219] transition-colors placeholder:text-[#3A3A3A]"
-                  placeholder="mardadmin"
+                  placeholder="Usuario"
                   required
                   autoComplete="username"
                 />
@@ -118,19 +120,18 @@ export default function AdminLogin() {
               </div>
             </div>
 
-            {/* Submit */}
             <button
               type="submit"
-              className="w-full h-[48px] bg-[#6F1219] text-white font-body text-sm font-medium uppercase tracking-[1px] hover:bg-[#5A0E14] transition-colors rounded-lg mt-2"
+              disabled={submitting}
+              className="w-full h-[48px] bg-[#6F1219] text-white font-body text-sm font-medium uppercase tracking-[1px] hover:bg-[#5A0E14] transition-colors rounded-lg mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Iniciar Sesion
+              {submitting ? 'Iniciando sesion...' : 'Iniciar Sesion'}
             </button>
           </form>
         </div>
 
-        {/* Hint */}
         <p className="text-center mt-6 font-body text-[12px] text-[#6B6B6B]">
-          Credenciales: mardadmin / Marda2025!
+          Acceso restringido. Si olvidaste tu contrasena, contacta al administrador.
         </p>
       </div>
 

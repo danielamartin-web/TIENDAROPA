@@ -70,137 +70,28 @@ export interface CustomerProfile {
 }
 
 export const DEFAULT_PROFILE: CustomerProfile = {
-  firstName: 'Cliente',
-  lastName: 'MARDA',
-  email: 'cliente@marda.com',
-  phone: '+54 9 11 3919-9537',
-  address: 'Av. Siempre Viva 123, 4B',
-  city: 'Buenos Aires',
-  province: 'CABA',
-  postalCode: 'C1000',
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  address: '',
+  city: '',
+  province: '',
+  postalCode: '',
 };
 
-// ─── Mock Orders ─────────────────────────────────────────────────────
-
-export const MOCK_ORDERS: Order[] = [
-  {
-    id: 'PED-2025-001',
-    date: '2025-01-15T10:30:00',
-    status: 'delivered',
-    items: [
-      {
-        productId: 1,
-        name: 'Conjunto Lenceria Elegance',
-        size: 'M',
-        quantity: 1,
-        price: 12999,
-        image: '/producto-1.jpg',
-      },
-      {
-        productId: 3,
-        name: 'Remera Oversize Negra',
-        size: 'L',
-        quantity: 2,
-        price: 8999,
-        image: '/producto-3.jpg',
-      },
-    ],
-    total: 30997,
-    customerName: 'Cliente MARDA',
-    customerEmail: 'cliente@marda.com',
-    customerPhone: '+54 9 11 3919-9537',
-    shippingAddress: 'Av. Siempre Viva 123, 4B, Buenos Aires',
-    timeline: [
-      { label: 'Pedido recibido', date: '15/01/2025', completed: true, current: false },
-      { label: 'Confirmado', date: '15/01/2025', completed: true, current: false },
-      { label: 'En camino', date: '16/01/2025', completed: true, current: false },
-      { label: 'Entregado', date: '18/01/2025', completed: true, current: false },
-    ],
-  },
-  {
-    id: 'PED-2025-002',
-    date: '2025-02-20T14:15:00',
-    status: 'shipped',
-    items: [
-      {
-        productId: 2,
-        name: 'Boxer Premium Pack x3',
-        size: 'L',
-        quantity: 1,
-        price: 15999,
-        image: '/producto-2.jpg',
-      },
-      {
-        productId: 4,
-        name: 'Top Crop Burdeos',
-        size: 'S',
-        quantity: 1,
-        price: 7499,
-        image: '/producto-4.jpg',
-      },
-      {
-        productId: 5,
-        name: 'Gorro Beanie Urban',
-        size: 'UNICO',
-        quantity: 1,
-        price: 4999,
-        image: '/producto-1.jpg',
-      },
-    ],
-    total: 28497,
-    customerName: 'Cliente MARDA',
-    customerEmail: 'cliente@marda.com',
-    customerPhone: '+54 9 11 3919-9537',
-    shippingAddress: 'Av. Siempre Viva 123, 4B, Buenos Aires',
-    timeline: [
-      { label: 'Pedido recibido', date: '20/02/2025', completed: true, current: false },
-      { label: 'Confirmado', date: '20/02/2025', completed: true, current: false },
-      { label: 'En camino', date: '21/02/2025', completed: true, current: true },
-      { label: 'Entregado', date: 'Pendiente', completed: false, current: false },
-    ],
-  },
-  {
-    id: 'PED-2025-003',
-    date: '2025-03-10T09:00:00',
-    status: 'processing',
-    items: [
-      {
-        productId: 6,
-        name: 'Conjunto Deportivo Air',
-        size: 'M',
-        quantity: 1,
-        price: 18999,
-        image: '/producto-3.jpg',
-      },
-    ],
-    total: 18999,
-    customerName: 'Cliente MARDA',
-    customerEmail: 'cliente@marda.com',
-    customerPhone: '+54 9 11 3919-9537',
-    shippingAddress: 'Av. Siempre Viva 123, 4B, Buenos Aires',
-    timeline: [
-      { label: 'Pedido recibido', date: '10/03/2025', completed: true, current: false },
-      { label: 'Confirmado', date: '10/03/2025', completed: true, current: true },
-      { label: 'En camino', date: 'Pendiente', completed: false, current: false },
-      { label: 'Entregado', date: 'Pendiente', completed: false, current: false },
-    ],
-  },
-];
-
 // ─── localStorage Functions ──────────────────────────────────────────
+
+export const MOCK_ORDERS: Order[] = [];
 
 export function getOrders(): Order[] {
   try {
     const raw = localStorage.getItem(ORDERS_KEY);
-    if (!raw) {
-      // Seed with mock data on first load
-      saveOrders(MOCK_ORDERS);
-      return MOCK_ORDERS;
-    }
+    if (!raw) return [];
     const parsed = JSON.parse(raw) as Order[];
-    return parsed;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return MOCK_ORDERS;
+    return [];
   }
 }
 
@@ -232,13 +123,10 @@ export function updateOrderStatus(id: string, status: OrderStatus): void {
 export function getCustomerProfile(): CustomerProfile {
   try {
     const raw = localStorage.getItem(CUSTOMER_PROFILE_KEY);
-    if (!raw) {
-      saveCustomerProfile(DEFAULT_PROFILE);
-      return DEFAULT_PROFILE;
-    }
+    if (!raw) return { ...DEFAULT_PROFILE };
     return { ...DEFAULT_PROFILE, ...JSON.parse(raw) };
   } catch {
-    return DEFAULT_PROFILE;
+    return { ...DEFAULT_PROFILE };
   }
 }
 
