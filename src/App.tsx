@@ -58,14 +58,7 @@ export default function App() {
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
-          <Route
-            path="/customer/dashboard"
-            element={
-              <ProtectedRoute>
-                <CustomerDashboard />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/customer/dashboard" element={<CustomerDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Route>
 

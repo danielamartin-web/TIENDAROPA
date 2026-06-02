@@ -635,6 +635,58 @@ function ProfileDisplay({
 
 type Tab = 'orders' | 'profile';
 
+function GuestGate({ onLogin }: { onLogin: (name: string) => void }) {
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const handle = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = name.trim();
+    if (trimmed.length < 2) {
+      setError('Ingresa al menos 2 caracteres');
+      return;
+    }
+    onLogin(trimmed);
+  };
+  return (
+    <main className="pt-[120px] pb-20 min-h-[100dvh] bg-[#FAFAFA] flex items-start justify-center px-5">
+      <div className="w-full max-w-[420px]">
+        <p className="font-mono text-[11px] text-[#6F1219] tracking-[3px] uppercase mb-3 text-center">Mi cuenta</p>
+        <h1 className="font-display text-3xl md:text-4xl text-[#1A1A1A] mb-2 text-center">Identificate</h1>
+        <p className="font-body text-sm text-[#6B6B6B] mb-8 text-center">
+          Ingresa tu nombre para ver tus pedidos y editar tu perfil.
+        </p>
+        <form onSubmit={handle} className="bg-white border border-[#E5E5E5] p-6 md:p-8 space-y-4">
+          <label className="block">
+            <span className="font-body text-xs text-[#6B6B6B] uppercase tracking-wider mb-2 block">
+              Tu nombre
+            </span>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => { setName(e.target.value); setError(''); }}
+              placeholder="Nombre y apellido"
+              autoComplete="name"
+              autoFocus
+              required
+              className="w-full h-[48px] px-4 bg-white border border-[#E5E5E5] font-body text-sm focus:outline-none focus:border-[#6F1219] focus:shadow-[0_0_0_3px_rgba(111,18,25,0.1)] transition-all"
+            />
+          </label>
+          {error && <p className="font-body text-xs text-[#EF4444]">{error}</p>}
+          <button
+            type="submit"
+            className="w-full h-[48px] bg-[#6F1219] text-white font-body text-xs uppercase tracking-[1px] hover:bg-[#5A0E14] transition-colors"
+          >
+            Entrar
+          </button>
+        </form>
+        <p className="font-body text-[11px] text-[#6B6B6B] mt-4 text-center">
+          Sesion local. No requiere contrasena. Cierra sesion para limpiar tus datos.
+        </p>
+      </div>
+    </main>
+  );
+}
+
 export default function CustomerDashboard() {
   const { isAuthenticated, customerName, customerLogin } = useAuthStore();
   const [activeTab, setActiveTab] = useState<Tab>('orders');
@@ -646,18 +698,16 @@ export default function CustomerDashboard() {
     visible: false,
   });
 
-  // Auto-login customer for demo if not authenticated
   useEffect(() => {
-    if (!isAuthenticated) {
-      customerLogin('Cliente MARDA');
+    if (isAuthenticated) {
+      setOrders(getOrders());
+      setProfile(getCustomerProfile());
     }
-  }, [isAuthenticated, customerLogin]);
+  }, [isAuthenticated]);
 
-  // Load orders and profile
-  useEffect(() => {
-    setOrders(getOrders());
-    setProfile(getCustomerProfile());
-  }, []);
+  if (!isAuthenticated) {
+    return <GuestGate onLogin={customerLogin} />;
+  }
 
   const stats = getOrderStats(orders);
 

@@ -385,6 +385,7 @@ function FilterContent({
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
+  const searchParam = searchParams.get('search') ?? '';
 
   const selectedCategory = useShopStore((s) => s.selectedCategory);
   const searchQuery = useShopStore((s) => s.searchQuery);
@@ -399,7 +400,7 @@ export default function Shop() {
 
   const [sortValue, setSortValue] = useState<SortValue>('relevant');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [localSearch, setLocalSearch] = useState(searchParam || searchQuery);
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerVisible, setHeaderVisible] = useState(false);
 
@@ -411,6 +412,26 @@ export default function Shop() {
       setCategory('todos');
     }
   }, [categoryParam, setCategory]);
+
+  // Sync search FROM URL on first mount and on URL changes
+  useEffect(() => {
+    if (searchParam !== searchQuery) {
+      setSearchQuery(searchParam);
+      setLocalSearch(searchParam);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParam]);
+
+  // Sync search TO URL (debounced via the localSearch effect below)
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    if (searchQuery) params.set('search', searchQuery);
+    else params.delete('search');
+    const next = params.toString();
+    const current = searchParams.toString();
+    if (next !== current) setSearchParams(params, { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   // Debounced search
   useEffect(() => {

@@ -27,6 +27,7 @@ const STATUS_TABS: { key: OrderStatus | 'todos'; label: string }[] = [
   { key: 'en_proceso', label: 'En Proceso' },
   { key: 'enviado', label: 'Enviado' },
   { key: 'entregado', label: 'Entregado' },
+  { key: 'cancelado', label: 'Cancelado' },
 ];
 
 const ITEMS_PER_PAGE = 8;

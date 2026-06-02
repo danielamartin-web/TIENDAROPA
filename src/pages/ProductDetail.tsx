@@ -214,6 +214,7 @@ export default function ProductDetail() {
       price: product.price,
       size: selectedSize,
       image: product.images[0],
+      quantity,
     });
     setAddedToCart(true);
     toast.success(`${product.name} agregado al carrito`, {
@@ -224,9 +225,22 @@ export default function ProductDetail() {
 
   const handleBuyWhatsApp = () => {
     if (!product) return;
-    const size = selectedSize || product.sizes[0] || '';
-    const msg = `Hola MARDA! Quiero comprar:${encodeURIComponent('\n')}- ${product.name} (Talle: ${size})${encodeURIComponent('\n')}Precio: ${formatPrice(product.price)}${encodeURIComponent('\n\n')}Link: ${window.location.href}`;
-    window.open(`https://wa.me/${DEFAULT_WHATSAPP_NUMBER}?text=${msg}`, '_blank');
+    if (!selectedSize) {
+      toast.error('Selecciona una talla primero');
+      return;
+    }
+    const lineTotal = product.price * quantity;
+    const msg =
+      `Hola MARDA! Quiero comprar:\n` +
+      `- ${product.name} (Talle: ${selectedSize}) x${quantity}\n` +
+      `Precio unitario: ${formatPrice(product.price)}\n` +
+      `Total: ${formatPrice(lineTotal)}\n\n` +
+      `Link: ${window.location.href}`;
+    window.open(
+      `https://wa.me/${DEFAULT_WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`,
+      '_blank',
+      'noopener,noreferrer'
+    );
   };
 
   const handleShare = async () => {
