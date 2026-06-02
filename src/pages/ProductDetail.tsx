@@ -16,7 +16,8 @@ import {
   Play,
 } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
-import { getProductById, products } from '@/data/products';
+import { getProductById, products as staticProducts } from '@/data/products';
+import { useProduct, useProducts } from '@/lib/hooks/useProducts';
 import { formatPrice, DEFAULT_WHATSAPP_NUMBER, SITE_URL } from '@/lib/constants';
 import SEO from '@/components/SEO';
 import {
@@ -89,7 +90,7 @@ function buildProductSchema(opts: {
 }
 
 /* ─── Related Product Card ─── */
-function RelatedCard({ product }: { product: (typeof products)[0] }) {
+function RelatedCard({ product }: { product: import('@/data/products').Product }) {
   return (
     <Link to={`/product/${product.id}`} className="group block">
       <div className="aspect-[3/4] overflow-hidden bg-[#F0F0F0] border border-[#F0F0F0] mb-3">
@@ -123,7 +124,12 @@ function RelatedCard({ product }: { product: (typeof products)[0] }) {
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const productId = Number(id);
-  const product = getProductById(productId);
+  const staticFallback = getProductById(productId);
+  const { product, loading: productLoading } = useProduct(
+    Number.isFinite(productId) ? productId : null,
+    staticFallback ?? null
+  );
+  const { products: allProducts } = useProducts({ initialData: staticProducts, keepStaleOnError: true });
 
   const addItem = useCartStore((s) => s.addItem);
 
@@ -197,10 +203,10 @@ export default function ProductDetail() {
 
   const relatedProducts = useMemo(() => {
     if (!product) return [];
-    return products
+    return allProducts
       .filter((p) => p.category === product.category && p.id !== product.id)
       .slice(0, 4);
-  }, [product]);
+  }, [product, allProducts]);
 
   // ── Handlers ──
   const handleAddToCart = () => {
@@ -275,7 +281,17 @@ export default function ProductDetail() {
     setCurrentImageIndex((i) => (i > 0 ? i - 1 : allMedia.length - 1));
   };
 
-  // ── Not found state ──
+  if (productLoading && !product) {
+    return (
+      <div className="pt-[72px] min-h-[100dvh] flex items-center justify-center bg-[#FAFAFA]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-[#6F1219] border-t-transparent rounded-full animate-spin" />
+          <p className="font-body text-xs text-[#6B6B6B] uppercase tracking-[2px]">Cargando</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!product) {
     return (
       <div className="pt-[72px] min-h-[100dvh] flex items-center justify-center">

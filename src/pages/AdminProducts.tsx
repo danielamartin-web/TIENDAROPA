@@ -1,25 +1,25 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Search,
   Plus,
   Edit,
   Trash2,
   X,
-
   Video,
   ChevronLeft,
   ChevronRight,
   Upload,
+  Link as LinkIcon,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { useProductStore } from '@/store/productStore';
+import { useProducts, useProductMutations, type ProductInput } from '@/lib/hooks/useProducts';
 import { formatPrice, ADMIN_CATEGORIES, AVAILABLE_SIZES } from '@/lib/adminUtils';
 import type { Product } from '@/data/products';
 import { Toaster, toast } from 'sonner';
 
 const ITEMS_PER_PAGE = 8;
 
-const emptyProduct: Omit<Product, 'id'> = {
+const emptyProduct: ProductInput = {
   name: '',
   description: '',
   price: 0,
@@ -33,16 +33,18 @@ const emptyProduct: Omit<Product, 'id'> = {
 };
 
 export default function AdminProducts() {
-  const { products, addProduct, updateProduct, deleteProduct } = useProductStore();
+  const { products, loading, error, refetch } = useProducts();
+  const { createProduct, updateProduct, deleteProduct, saving } = useProductMutations(refetch);
+
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Modal state
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [form, setForm] = useState<Omit<Product, 'id'>>({ ...emptyProduct });
+  const [form, setForm] = useState<ProductInput>({ ...emptyProduct });
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [imageUrlInput, setImageUrlInput] = useState('');
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -57,17 +59,18 @@ export default function AdminProducts() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Filter products
-  const filtered = products.filter((p) => {
-    const matchesSearch =
-      !search ||
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.description.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  const filtered = useMemo(() => {
+    return products.filter((p) => {
+      const matchesSearch =
+        !search ||
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.description.toLowerCase().includes(search.toLowerCase());
+      const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, search, categoryFilter]);
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginated = filtered.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
@@ -76,42 +79,67 @@ export default function AdminProducts() {
   const openAdd = () => {
     setEditingProduct(null);
     setForm({ ...emptyProduct });
+    setImageUrlInput('');
     setShowModal(true);
   };
 
   const openEdit = (product: Product) => {
     setEditingProduct(product);
-    setForm({ ...product });
+    setForm({
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      category: product.category,
+      sizes: product.sizes,
+      images: product.images,
+      video: product.video,
+      inStock: product.inStock,
+      badge: product.badge ?? '',
+    });
+    setImageUrlInput('');
     setShowModal(true);
   };
 
-  const handleSave = () => {
-    if (!form.name.trim()) {
-      toast.error('El nombre es obligatorio');
-      return;
+  const handleSave = async () => {
+    if (!form.name.trim()) return toast.error('El nombre es obligatorio');
+    if (form.price <= 0) return toast.error('El precio debe ser mayor a 0');
+    if (form.images.some((u) => u.startsWith('blob:'))) {
+      toast.warning('Las imagenes blob: solo funcionan en tu navegador. Usa URLs publicas para que las vean tus clientes.');
     }
-    if (form.price <= 0) {
-      toast.error('El precio debe ser mayor a 0');
-      return;
+
+    try {
+      const payload: ProductInput = {
+        ...form,
+        badge: form.badge?.trim() ? form.badge.trim() : null,
+        originalPrice: form.originalPrice ?? null,
+        video: form.video ?? null,
+      };
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, payload);
+        toast.success('Producto actualizado');
+      } else {
+        await createProduct(payload);
+        toast.success('Producto creado');
+      }
+      setShowModal(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al guardar');
     }
-    if (editingProduct) {
-      updateProduct(editingProduct.id, form);
-      toast.success('Producto actualizado');
-    } else {
-      addProduct(form);
-      toast.success('Producto creado');
-    }
-    setShowModal(false);
   };
 
-  const handleDelete = (id: number) => {
-    if (deleteConfirm === id) {
-      deleteProduct(id);
+  const handleDelete = async (id: number) => {
+    if (deleteConfirm !== id) {
+      setDeleteConfirm(id);
+      setTimeout(() => setDeleteConfirm((curr) => (curr === id ? null : curr)), 3000);
+      return;
+    }
+    try {
+      await deleteProduct(id);
       setDeleteConfirm(null);
       toast.success('Producto eliminado');
-    } else {
-      setDeleteConfirm(id);
-      setTimeout(() => setDeleteConfirm(null), 3000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al eliminar');
     }
   };
 
@@ -125,28 +153,39 @@ export default function AdminProducts() {
       return;
     }
     const newImages = valid.map((file) => URL.createObjectURL(file));
-    const unique = [...new Set([...form.images, ...newImages])].slice(0, 10);
+    const unique = Array.from(new Set([...form.images, ...newImages])).slice(0, 10);
     setForm((f) => ({ ...f, images: unique }));
     e.target.value = '';
-    toast.success(`${newImages.length} imagen(es) agregada(s)`);
+    toast.success(`${newImages.length} imagen(es) en vista previa`);
+  };
+
+  const handleAddImageUrl = () => {
+    const url = imageUrlInput.trim();
+    if (!url) return;
+    try {
+      new URL(url);
+    } catch {
+      toast.error('URL invalida');
+      return;
+    }
+    if (form.images.includes(url)) {
+      toast.message('Imagen ya agregada');
+      return;
+    }
+    setForm((f) => ({ ...f, images: [...f.images, url].slice(0, 10) }));
+    setImageUrlInput('');
   };
 
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || !files[0]) return;
-    if (!files[0].type.startsWith('video/')) {
-      toast.error('Solo archivos de video');
-      return;
-    }
-    if (files[0].size > 50 * 1024 * 1024) {
-      toast.error('Video maximo 50MB');
-      return;
-    }
+    if (!files[0].type.startsWith('video/')) return toast.error('Solo archivos de video');
+    if (files[0].size > 50 * 1024 * 1024) return toast.error('Video maximo 50MB');
     if (form.video && form.video.startsWith('blob:')) URL.revokeObjectURL(form.video);
     const url = URL.createObjectURL(files[0]);
     setForm((f) => ({ ...f, video: url }));
     e.target.value = '';
-    toast.success('Video agregado');
+    toast.warning('Video blob: solo funciona en tu navegador. Usa una URL publica para clientes.');
   };
 
   const removeImage = (idx: number) => {
@@ -167,9 +206,7 @@ export default function AdminProducts() {
   const toggleSize = (size: string) => {
     setForm((f) => ({
       ...f,
-      sizes: f.sizes.includes(size)
-        ? f.sizes.filter((s) => s !== size)
-        : [...f.sizes, size],
+      sizes: f.sizes.includes(size) ? f.sizes.filter((s) => s !== size) : [...f.sizes, size],
     }));
   };
 
@@ -182,11 +219,10 @@ export default function AdminProducts() {
         }}
       />
 
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <p className="font-body text-[13px] text-[#6B6B6B] mt-1">
-            {filtered.length} productos en total
+            {loading ? 'Cargando productos...' : `${filtered.length} producto(s) en total`}
           </p>
         </div>
         <button
@@ -198,101 +234,84 @@ export default function AdminProducts() {
         </button>
       </div>
 
-      {/* Filters */}
+      {error && (
+        <div className="mb-6 p-4 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-lg text-[#EF4444] font-body text-sm">
+          Error al cargar productos: {error}.{' '}
+          <button onClick={refetch} className="underline">
+            Reintentar
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
-          <Search
-            size={16}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B6B6B]"
-          />
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B6B6B]" />
           <input
             type="text"
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Buscar producto..."
             className="w-full h-[44px] pl-10 pr-4 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-white font-body text-sm focus:outline-none focus:border-[#6F1219] transition-colors placeholder:text-[#6B6B6B]"
           />
         </div>
         <select
           value={categoryFilter}
-          onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
+          onChange={(e) => {
+            setCategoryFilter(e.target.value);
+            setCurrentPage(1);
+          }}
           className="h-[44px] px-4 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-white font-body text-sm focus:outline-none focus:border-[#6F1219] appearance-none cursor-pointer"
         >
           <option value="all">Todas las categorias</option>
           {ADMIN_CATEGORIES.map((c) => (
-            <option key={c.value} value={c.value}>{c.label}</option>
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
           ))}
         </select>
       </div>
 
-      {/* Table */}
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl overflow-hidden mb-6">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-[#2A2A2A]">
-                <th className="text-left px-4 py-3 font-body text-[12px] uppercase tracking-[1px] text-[#6B6B6B] font-medium">
-                  Producto
-                </th>
-                <th className="text-left px-4 py-3 font-body text-[12px] uppercase tracking-[1px] text-[#6B6B6B] font-medium hidden sm:table-cell">
-                  Categoria
-                </th>
-                <th className="text-left px-4 py-3 font-body text-[12px] uppercase tracking-[1px] text-[#6B6B6B] font-medium">
-                  Precio
-                </th>
-                <th className="text-left px-4 py-3 font-body text-[12px] uppercase tracking-[1px] text-[#6B6B6B] font-medium hidden md:table-cell">
-                  Stock
-                </th>
-                <th className="text-right px-4 py-3 font-body text-[12px] uppercase tracking-[1px] text-[#6B6B6B] font-medium">
-                  Acciones
-                </th>
+                <th className="text-left px-4 py-3 font-body text-[12px] uppercase tracking-[1px] text-[#6B6B6B] font-medium">Producto</th>
+                <th className="text-left px-4 py-3 font-body text-[12px] uppercase tracking-[1px] text-[#6B6B6B] font-medium hidden sm:table-cell">Categoria</th>
+                <th className="text-left px-4 py-3 font-body text-[12px] uppercase tracking-[1px] text-[#6B6B6B] font-medium">Precio</th>
+                <th className="text-left px-4 py-3 font-body text-[12px] uppercase tracking-[1px] text-[#6B6B6B] font-medium hidden md:table-cell">Stock</th>
+                <th className="text-right px-4 py-3 font-body text-[12px] uppercase tracking-[1px] text-[#6B6B6B] font-medium">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {paginated.map((product) => (
-                <tr
-                  key={product.id}
-                  className="border-b border-[#2A2A2A] last:border-0 hover:bg-[#222222] transition-colors"
-                >
+                <tr key={product.id} className="border-b border-[#2A2A2A] last:border-0 hover:bg-[#222222] transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded bg-[#2A2A2A] overflow-hidden flex-shrink-0">
                         {product.images[0] && (
-                          <img
-                            src={product.images[0]}
-                            alt={product.name}
-                            className="w-full h-full object-cover"
-                          />
+                          <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
                         )}
                       </div>
-                      <span className="font-body text-[13px] text-white truncate max-w-[160px] sm:max-w-[200px]">
-                        {product.name}
-                      </span>
+                      <span className="font-body text-[13px] text-white truncate max-w-[160px] sm:max-w-[200px]">{product.name}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
-                    <span className="inline-block px-2 py-1 bg-[#2A2A2A] rounded font-body text-[11px] text-[#A1A1A1] capitalize">
-                      {product.category}
-                    </span>
+                    <span className="inline-block px-2 py-1 bg-[#2A2A2A] rounded font-body text-[11px] text-[#A1A1A1] capitalize">{product.category}</span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col">
-                      <span className="font-mono text-[13px] text-white">
-                        {formatPrice(product.price)}
-                      </span>
+                      <span className="font-mono text-[13px] text-white">{formatPrice(product.price)}</span>
                       {product.originalPrice && (
-                        <span className="font-mono text-[11px] text-[#6B6B6B] line-through">
-                          {formatPrice(product.originalPrice)}
-                        </span>
+                        <span className="font-mono text-[11px] text-[#6B6B6B] line-through">{formatPrice(product.originalPrice)}</span>
                       )}
                     </div>
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
-                    <span
-                      className={`font-mono text-[12px] ${
-                        product.sizes.length < 3 ? 'text-[#EF4444]' : 'text-[#22C55E]'
-                      }`}
-                    >
+                    <span className={`font-mono text-[12px] ${product.sizes.length < 3 ? 'text-[#EF4444]' : 'text-[#22C55E]'}`}>
                       {product.sizes.length} tallas
                     </span>
                   </td>
@@ -320,13 +339,11 @@ export default function AdminProducts() {
                   </td>
                 </tr>
               ))}
-              {paginated.length === 0 && (
+              {paginated.length === 0 && !loading && (
                 <tr>
                   <td colSpan={5} className="px-4 py-12 text-center">
-                    <Package className="mx-auto mb-3 text-[#2A2A2A]" size={40} />
-                    <p className="font-body text-[14px] text-[#6B6B6B]">
-                      No se encontraron productos
-                    </p>
+                    <PackageIcon className="mx-auto mb-3 text-[#2A2A2A]" size={40} />
+                    <p className="font-body text-[14px] text-[#6B6B6B]">No se encontraron productos</p>
                   </td>
                 </tr>
               )}
@@ -335,7 +352,6 @@ export default function AdminProducts() {
         </div>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <button
@@ -351,9 +367,7 @@ export default function AdminProducts() {
               key={p}
               onClick={() => setCurrentPage(p)}
               className={`w-8 h-8 rounded-lg font-body text-[12px] transition-colors ${
-                p === currentPage
-                  ? 'bg-[#6F1219] text-white'
-                  : 'text-[#6B6B6B] hover:text-white hover:bg-[#2A2A2A]'
+                p === currentPage ? 'bg-[#6F1219] text-white' : 'text-[#6B6B6B] hover:text-white hover:bg-[#2A2A2A]'
               }`}
             >
               {p}
@@ -370,35 +384,20 @@ export default function AdminProducts() {
         </div>
       )}
 
-      {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto py-4 px-4">
-          <div
-            className="fixed inset-0 bg-black/70"
-            onClick={() => setShowModal(false)}
-          />
+          <div className="fixed inset-0 bg-black/70" onClick={() => !saving && setShowModal(false)} />
           <div className="relative bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl w-full max-w-[640px] my-4 animate-scale-in">
-            {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#2A2A2A]">
-              <h2 className="font-display text-lg text-white">
-                {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
-              </h2>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-2 text-[#6B6B6B] hover:text-white transition-colors"
-                aria-label="Cerrar"
-              >
+              <h2 className="font-display text-lg text-white">{editingProduct ? 'Editar Producto' : 'Nuevo Producto'}</h2>
+              <button onClick={() => !saving && setShowModal(false)} className="p-2 text-[#6B6B6B] hover:text-white transition-colors" aria-label="Cerrar">
                 <X size={20} />
               </button>
             </div>
 
-            {/* Modal Body */}
             <div className="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
-              {/* Name */}
               <div>
-                <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">
-                  Nombre del producto *
-                </label>
+                <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">Nombre del producto *</label>
                 <input
                   type="text"
                   value={form.name}
@@ -408,11 +407,8 @@ export default function AdminProducts() {
                 />
               </div>
 
-              {/* Description */}
               <div>
-                <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">
-                  Descripcion
-                </label>
+                <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">Descripcion</label>
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
@@ -421,11 +417,8 @@ export default function AdminProducts() {
                 />
               </div>
 
-              {/* Category */}
               <div>
-                <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">
-                  Categoria
-                </label>
+                <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">Categoria</label>
                 <select
                   value={form.category}
                   onChange={(e) =>
@@ -439,30 +432,23 @@ export default function AdminProducts() {
                 </select>
               </div>
 
-              {/* Prices Row */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">
-                    Precio *
-                  </label>
+                  <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">Precio *</label>
                   <input
                     type="number"
                     value={form.price || ''}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, price: Number(e.target.value) }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) || 0 }))}
                     className="w-full h-[44px] px-4 bg-[#0F0F0F] border border-[#2A2A2A] rounded-lg text-white font-body text-sm focus:outline-none focus:border-[#6F1219] transition-colors"
                     placeholder="0"
                     min={0}
                   />
                 </div>
                 <div>
-                  <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">
-                    Precio original (tachado)
-                  </label>
+                  <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">Precio original (tachado)</label>
                   <input
                     type="number"
-                    value={form.originalPrice || ''}
+                    value={form.originalPrice ?? ''}
                     onChange={(e) =>
                       setForm((f) => ({
                         ...f,
@@ -476,24 +462,33 @@ export default function AdminProducts() {
                 </div>
               </div>
 
-              {/* Stock */}
               <div>
-                <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">
-                  Stock
-                </label>
+                <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">Badge (opcional)</label>
                 <input
-                  type="number"
-                  value={form.sizes.length}
-                  readOnly
-                  className="w-full h-[44px] px-4 bg-[#0F0F0F] border border-[#2A2A2A] rounded-lg text-white font-body text-sm cursor-default"
+                  type="text"
+                  value={form.badge ?? ''}
+                  onChange={(e) => setForm((f) => ({ ...f, badge: e.target.value }))}
+                  className="w-full h-[44px] px-4 bg-[#0F0F0F] border border-[#2A2A2A] rounded-lg text-white font-body text-sm focus:outline-none focus:border-[#6F1219] transition-colors"
+                  placeholder="Ej: NUEVO, -20%, PACK x3"
+                  maxLength={32}
                 />
               </div>
 
-              {/* Sizes */}
-              <div>
-                <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">
-                  Tallas disponibles
+              <div className="flex items-center gap-3">
+                <input
+                  id="inStock"
+                  type="checkbox"
+                  checked={form.inStock}
+                  onChange={(e) => setForm((f) => ({ ...f, inStock: e.target.checked }))}
+                  className="w-4 h-4 accent-[#6F1219]"
+                />
+                <label htmlFor="inStock" className="font-body text-[13px] text-[#A1A1A1] cursor-pointer">
+                  En stock
                 </label>
+              </div>
+
+              <div>
+                <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">Tallas disponibles</label>
                 <div className="flex flex-wrap gap-2">
                   {AVAILABLE_SIZES.map((size) => (
                     <button
@@ -512,22 +507,12 @@ export default function AdminProducts() {
                 </div>
               </div>
 
-              {/* Images Upload */}
               <div>
-                <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">
-                  Imagenes ({form.images.length}/10)
-                </label>
+                <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">Imagenes ({form.images.length}/10)</label>
                 <div className="grid grid-cols-5 gap-2 mb-3">
                   {form.images.map((img, idx) => (
-                    <div
-                      key={idx}
-                      className="relative aspect-square rounded-lg overflow-hidden bg-[#0F0F0F] border border-[#2A2A2A]"
-                    >
-                      <img
-                        src={img}
-                        alt={`Imagen ${idx + 1}`}
-                        className="w-full h-full object-cover"
-                      />
+                    <div key={idx} className="relative aspect-square rounded-lg overflow-hidden bg-[#0F0F0F] border border-[#2A2A2A]">
+                      <img src={img} alt={`Imagen ${idx + 1}`} className="w-full h-full object-cover" />
                       <button
                         onClick={() => removeImage(idx)}
                         className="absolute top-1 right-1 w-5 h-5 bg-[#EF4444] rounded-full flex items-center justify-center text-white hover:bg-[#DC2626] transition-colors"
@@ -536,9 +521,7 @@ export default function AdminProducts() {
                         <X size={10} />
                       </button>
                       {idx === 0 && (
-                        <span className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-[#6F1219] rounded font-body text-[9px] text-white font-medium">
-                          Principal
-                        </span>
+                        <span className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-[#6F1219] rounded font-body text-[9px] text-white font-medium">Principal</span>
                       )}
                     </div>
                   ))}
@@ -552,28 +535,40 @@ export default function AdminProducts() {
                     </button>
                   )}
                 </div>
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
+
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <LinkIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B6B6B]" />
+                    <input
+                      type="url"
+                      value={imageUrlInput}
+                      onChange={(e) => setImageUrlInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddImageUrl())}
+                      placeholder="https://... (URL publica de imagen)"
+                      className="w-full h-[40px] pl-9 pr-4 bg-[#0F0F0F] border border-[#2A2A2A] rounded-lg text-white font-body text-[12px] focus:outline-none focus:border-[#6F1219] transition-colors"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddImageUrl}
+                    disabled={!imageUrlInput.trim() || form.images.length >= 10}
+                    className="px-4 h-[40px] bg-[#2A2A2A] hover:bg-[#3A3A3A] disabled:opacity-50 disabled:cursor-not-allowed text-white font-body text-[12px] rounded-lg transition-colors"
+                  >
+                    Agregar URL
+                  </button>
+                </div>
+                <p className="font-body text-[10px] text-[#6B6B6B] mt-2">
+                  Recomendado: usa URLs publicas. Las imagenes subidas son solo vista previa local.
+                </p>
+
+                <input ref={imageInputRef} type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
               </div>
 
-              {/* Video Upload */}
               <div>
-                <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">
-                  Video (opcional, max 1)
-                </label>
+                <label className="font-body text-[13px] text-[#A1A1A1] mb-2 block">Video (opcional, max 1)</label>
                 {form.video ? (
                   <div className="relative rounded-lg overflow-hidden bg-[#0F0F0F] border border-[#2A2A2A]">
-                    <video
-                      src={form.video}
-                      controls
-                      className="w-full h-[160px] object-contain"
-                    />
+                    <video src={form.video} controls className="w-full h-[160px] object-contain" />
                     <button
                       onClick={removeVideo}
                       className="absolute top-2 right-2 p-1.5 bg-[#EF4444] rounded-full text-white hover:bg-[#DC2626] transition-colors"
@@ -588,34 +583,23 @@ export default function AdminProducts() {
                     className="w-full h-[80px] rounded-lg border-2 border-dashed border-[#2A2A2A] flex flex-col items-center justify-center gap-1 hover:border-[#6F1219] hover:bg-[#6F1219]/5 transition-colors"
                   >
                     <Video size={18} className="text-[#6B6B6B]" />
-                    <span className="font-body text-[11px] text-[#6B6B6B]">
-                      Subir video (max 50MB)
-                    </span>
+                    <span className="font-body text-[11px] text-[#6B6B6B]">Subir video (max 50MB)</span>
                   </button>
                 )}
-                <input
-                  ref={videoInputRef}
-                  type="file"
-                  accept="video/*"
-                  onChange={handleVideoUpload}
-                  className="hidden"
-                />
+                <input ref={videoInputRef} type="file" accept="video/*" onChange={handleVideoUpload} className="hidden" />
               </div>
             </div>
 
-            {/* Modal Footer */}
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#2A2A2A]">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-5 py-2.5 font-body text-sm text-[#A1A1A1] hover:text-white transition-colors"
-              >
+              <button onClick={() => !saving && setShowModal(false)} className="px-5 py-2.5 font-body text-sm text-[#A1A1A1] hover:text-white transition-colors">
                 Cancelar
               </button>
               <button
                 onClick={handleSave}
-                className="px-6 py-2.5 bg-[#6F1219] text-white font-body text-sm font-medium rounded-lg hover:bg-[#5A0E14] transition-colors"
+                disabled={saving}
+                className="px-6 py-2.5 bg-[#6F1219] text-white font-body text-sm font-medium rounded-lg hover:bg-[#5A0E14] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {editingProduct ? 'Guardar Cambios' : 'Crear Producto'}
+                {saving ? 'Guardando...' : editingProduct ? 'Guardar Cambios' : 'Crear Producto'}
               </button>
             </div>
           </div>
@@ -625,7 +609,7 @@ export default function AdminProducts() {
   );
 }
 
-function Package(props: React.SVGAttributes<SVGSVGElement> & { size?: number }) {
+function PackageIcon(props: React.SVGAttributes<SVGSVGElement> & { size?: number }) {
   const { size = 24, ...rest } = props;
   return (
     <svg

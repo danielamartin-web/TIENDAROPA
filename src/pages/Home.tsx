@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getFeaturedProducts } from '@/data/products';
+import { products as staticProducts } from '@/data/products';
 import { useCartStore } from '@/store/cartStore';
+import { useProducts } from '@/lib/hooks/useProducts';
 import { Instagram } from 'lucide-react';
 import SEO from '@/components/SEO';
 
@@ -262,7 +263,8 @@ function FeaturedProductsSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const addItem = useCartStore((s) => s.addItem);
-  const featuredProducts = getFeaturedProducts(4);
+  const { products: allProducts } = useProducts({ initialData: staticProducts, keepStaleOnError: true });
+  const featuredProducts = allProducts.slice(0, 4);
 
   useEffect(() => {
     const observer = new IntersectionObserver(

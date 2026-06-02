@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useCartStore } from '@/store/cartStore';
 import { useOrderStore } from '@/store/orderStore';
+import { createOrderPublic } from '@/lib/hooks/useOrders';
 import {
   ChevronRight,
   ChevronLeft,
@@ -254,12 +255,19 @@ export default function Checkout() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleConfirmOrder = () => {
+  const [submittingOrder, setSubmittingOrder] = useState(false);
+  const [orderSubmitError, setOrderSubmitError] = useState<string | null>(null);
+
+  const handleConfirmOrder = async () => {
+    if (submittingOrder) return;
+    setOrderSubmitError(null);
+    setSubmittingOrder(true);
+
     const itemsSnapshot = [...items];
-    const created = addOrder({
+    const orderPayload = {
       customerName: formData.fullName,
       whatsapp: formData.phone,
-      email: formData.email,
+      email: formData.email || undefined,
       address: `${formData.address}, ${formData.city}, ${formData.province} (CP ${formData.zipCode})`,
       items: itemsSnapshot.map((i) => ({
         productId: i.productId,
@@ -270,11 +278,32 @@ export default function Checkout() {
         image: i.image,
       })),
       total,
-      status: 'pendiente',
       notes: formData.notes,
-    });
+    };
 
-    setOrderId(created.id);
+    let createdId: string;
+    try {
+      const created = await createOrderPublic(orderPayload);
+      createdId = created.id;
+    } catch (apiErr) {
+      const fallback = addOrder({
+        customerName: orderPayload.customerName,
+        whatsapp: orderPayload.whatsapp,
+        email: orderPayload.email,
+        address: orderPayload.address,
+        items: orderPayload.items,
+        total,
+        status: 'pendiente',
+        notes: orderPayload.notes,
+      });
+      createdId = fallback.id;
+      console.warn('[checkout] backend POST falló, usando local fallback:', apiErr);
+      setOrderSubmitError(
+        'No pudimos confirmar el pedido con el servidor. Te lo enviamos por WhatsApp igual; te contactamos para confirmar.'
+      );
+    }
+
+    setOrderId(createdId);
     setSnapshot({
       items: itemsSnapshot,
       subtotal,
@@ -289,7 +318,7 @@ export default function Checkout() {
       shippingCost,
       total,
       formData,
-      created.id,
+      createdId,
       formData.deliveryMethod
     );
     const url = `https://wa.me/${DEFAULT_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
@@ -297,6 +326,7 @@ export default function Checkout() {
 
     setStep(2);
     clearCart();
+    setSubmittingOrder(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -338,6 +368,11 @@ export default function Checkout() {
               Tu pedido fue enviado por WhatsApp. Martin o Daniela se pondran en
               contacto con vos para confirmar.
             </p>
+            {orderSubmitError && (
+              <div className="mb-6 p-3 bg-[#FEF3C7] border border-[#D4A574]/40 rounded text-left">
+                <p className="font-body text-xs text-[#92400E]">{orderSubmitError}</p>
+              </div>
+            )}
 
             <div className="bg-[#FAFAFA] p-4 mb-6">
               <p className="font-body text-xs text-[#6B6B6B] uppercase tracking-wider mb-1">
@@ -873,10 +908,11 @@ export default function Checkout() {
                 {/* Confirm button - desktop */}
                 <button
                   onClick={handleConfirmOrder}
-                  className="w-full h-[52px] bg-[#25D366] text-white font-body text-sm font-medium uppercase tracking-[1px] hover:bg-[#1DA851] hover:-translate-y-0.5 hover:shadow-whatsapp transition-all mb-3 flex items-center justify-center gap-2"
+                  disabled={submittingOrder}
+                  className="w-full h-[52px] bg-[#25D366] text-white font-body text-sm font-medium uppercase tracking-[1px] hover:bg-[#1DA851] hover:-translate-y-0.5 hover:shadow-whatsapp transition-all mb-3 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <MessageCircle size={20} />
-                  Enviar Pedido por WhatsApp
+                  {submittingOrder ? 'Enviando...' : 'Enviar Pedido por WhatsApp'}
                 </button>
 
                 <button
@@ -985,7 +1021,8 @@ export default function Checkout() {
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#E5E5E5] p-4 md:hidden z-40">
           <button
             onClick={handleConfirmOrder}
-            className="w-full h-[48px] bg-[#25D366] text-white font-body text-sm font-medium uppercase tracking-[1px] flex items-center justify-center gap-2 hover:bg-[#1DA851] transition-colors"
+            disabled={submittingOrder}
+            className="w-full h-[48px] bg-[#25D366] text-white font-body text-sm font-medium uppercase tracking-[1px] flex items-center justify-center gap-2 hover:bg-[#1DA851] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <MessageCircle size={18} />
             Enviar por WhatsApp

@@ -4,23 +4,19 @@ import type { Product } from '@/data/products';
 import type { Category } from '@/lib/constants';
 
 interface ShopState {
-  // Products
   allProducts: Product[];
-
-  // Filters
   selectedCategory: Category | 'todos';
   searchQuery: string;
   priceRange: [number, number];
   selectedSizes: string[];
 
-  // Actions
+  setAllProducts: (next: Product[]) => void;
   setCategory: (category: Category | 'todos') => void;
   setSearchQuery: (query: string) => void;
   setPriceRange: (range: [number, number]) => void;
   toggleSize: (size: string) => void;
   clearFilters: () => void;
 
-  // Getters
   getFilteredProducts: () => Product[];
 }
 
@@ -30,6 +26,8 @@ export const useShopStore = create<ShopState>((set, get) => ({
   searchQuery: '',
   priceRange: [0, 50000],
   selectedSizes: [],
+
+  setAllProducts: (next) => set({ allProducts: next }),
 
   setCategory: (category) => set({ selectedCategory: category }),
 

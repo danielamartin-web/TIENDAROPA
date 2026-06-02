@@ -9,9 +9,9 @@ export interface Product {
   category: Category;
   sizes: string[];
   images: string[];
-  video?: string;
+  video?: string | null;
   inStock: boolean;
-  badge?: string;
+  badge?: string | null;
 }
 
 export const products: Product[] = [
