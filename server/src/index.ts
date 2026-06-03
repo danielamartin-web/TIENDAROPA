@@ -10,6 +10,7 @@ import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { env } from './env.js';
 import { pingDb } from './db/client.js';
+import { bootstrapAdmin } from './bootstrap.js';
 import { authRoutes } from './routes/auth.js';
 import { productRoutes } from './routes/products.js';
 import { orderRoutes } from './routes/orders.js';
@@ -95,6 +96,8 @@ async function bootStatic() {
 
 async function main() {
   await bootStatic();
+  // Bootstrap admin desde env vars (no-throw: si falla, el server arranca igual).
+  await bootstrapAdmin().catch((err) => console.error('[bootstrap] fatal:', err));
   serve({
     fetch: app.fetch,
     port: env.PORT,

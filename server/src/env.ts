@@ -8,6 +8,7 @@ const schema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 chars'),
   ADMIN_USERNAME: z.string().min(3),
   ADMIN_INITIAL_PASSWORD: z.string().min(8).optional(),
+  ADMIN_RESET_PASSWORD: z.string().min(8).optional(),
   CORS_ORIGINS: z.string().optional(),
   STATIC_DIR: z.string().default('../dist'),
 });
