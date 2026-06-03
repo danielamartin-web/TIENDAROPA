@@ -41,7 +41,7 @@ const defaultSettings: AppSettings = {
   email: 'contacto@marda.com',
   address: 'Buenos Aires, Argentina',
   hours: 'Lunes a Viernes 9:00 - 18:00, Sabados 10:00 - 14:00',
-  instagram: 'marda.oficial',
+  instagram: 'Marda.0ficial',
   facebook: 'mardaoficial',
   tiktok: 'marda.oficial',
   whatsappNumber: '5491139199537',
@@ -251,7 +251,7 @@ export default function AdminSettings() {
             value={settings.instagram}
             onChange={(e) => updateField('instagram', e.target.value)}
             className="w-full h-[44px] pl-10 pr-4 bg-[#0F0F0F] border border-[#2A2A2A] rounded-lg text-white font-body text-sm focus:outline-none focus:border-[#6F1219] transition-colors"
-            placeholder="marda.oficial"
+            placeholder="Marda.0ficial"
           />
         </div>
         <p className="font-body text-[11px] text-[#6B6B6B] mt-1">

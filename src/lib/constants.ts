@@ -8,7 +8,7 @@ export const STORE_DESCRIPTION = 'MARDA - Tienda online de ropa interior y ropa 
 export const WHATSAPP_MARTIN = '5491139199537';
 export const WHATSAPP_DANIELA = '5491178204224';
 export const DEFAULT_WHATSAPP_NUMBER = WHATSAPP_MARTIN;
-export const DEFAULT_INSTAGRAM = 'marda.oficial';
+export const DEFAULT_INSTAGRAM = 'Marda.0ficial';
 export const DEFAULT_FACEBOOK = 'mardaoficial';
 export const DEFAULT_TIKTOK = 'marda.oficial';
 

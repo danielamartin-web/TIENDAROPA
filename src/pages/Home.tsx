@@ -607,7 +607,7 @@ function SocialSection() {
           }}
         >
           <h2 className="font-display text-h3 text-white mb-2">SEGUINOS</h2>
-          <p className="font-body text-lg text-[#D4A574]">@marda.oficial</p>
+          <p className="font-body text-lg text-[#D4A574]">@Marda.0ficial</p>
         </div>
 
         {/* Image Grid */}
@@ -615,7 +615,7 @@ function SocialSection() {
           {gridImages.map((img, index) => (
             <a
               key={index}
-              href="https://instagram.com/marda.oficial"
+              href="https://instagram.com/Marda.0ficial"
               target="_blank"
               rel="noopener noreferrer"
               className="group relative aspect-square overflow-hidden block"
@@ -650,7 +650,7 @@ function SocialSection() {
         >
           {[
             { Icon: WhatsAppIcon, href: 'https://wa.me/5491139199537', label: 'WhatsApp' },
-            { Icon: InstagramIcon, href: 'https://instagram.com/marda.oficial', label: 'Instagram' },
+            { Icon: InstagramIcon, href: 'https://instagram.com/Marda.0ficial', label: 'Instagram' },
             { Icon: FacebookIcon, href: 'https://facebook.com/mardaoficial', label: 'Facebook' },
             { Icon: TikTokIcon, href: 'https://tiktok.com/@marda.oficial', label: 'TikTok' },
           ].map(({ Icon, href, label }) => (
