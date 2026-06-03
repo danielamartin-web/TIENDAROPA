@@ -26,6 +26,21 @@ export const getFacebookUrl = (page: string = DEFAULT_FACEBOOK) =>
 export const getTikTokUrl = (user: string = DEFAULT_TIKTOK) =>
   `https://tiktok.com/@${user}`;
 
+// Red MADSJEEZ — sitios hermanos del mismo grupo (footer + JSON-LD sameAs)
+export interface NetworkSite {
+  name: string;
+  url: string;
+  description: string;
+}
+export const MADSJEEZ_NETWORK: NetworkSite[] = [
+  { name: 'MADSJEEZ Design',  url: 'https://www.madsjeezdesign.com', description: 'Estudio de diseno y desarrollo' },
+  { name: 'MADSJEEZ',         url: 'https://www.madsjeez.com.ar',   description: 'Agencia digital' },
+  { name: 'JeezPro',          url: 'https://www.appjeezpro.com',    description: 'Suite de apps' },
+  { name: 'JeezPro Store',    url: 'https://www.appjeezpro.store',  description: 'Tienda oficial JeezPro' },
+  { name: 'TrabajoCerca',     url: 'https://www.trabajocerca.site', description: 'Trabajos cerca tuyo' },
+  { name: 'Melli y Melos',    url: 'https://www.mellimelos.site',   description: 'Otra tienda del grupo' },
+];
+
 // Admin credentials
 export const ADMIN_USERNAME = 'mardadmin';
 export const ADMIN_PASSWORD = 'Marda2025!';

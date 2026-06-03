@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { MapPin, Clock, Mail, Phone } from 'lucide-react';
-import { STORE_NAME, STORE_TAGLINE, DEFAULT_ADDRESS, DEFAULT_HOURS, DEFAULT_EMAIL, DEFAULT_WHATSAPP_NUMBER, getInstagramUrl, getFacebookUrl, getTikTokUrl } from '@/lib/constants';
+import { STORE_NAME, STORE_TAGLINE, DEFAULT_ADDRESS, DEFAULT_HOURS, DEFAULT_EMAIL, DEFAULT_WHATSAPP_NUMBER, getInstagramUrl, getFacebookUrl, getTikTokUrl, MADSJEEZ_NETWORK } from '@/lib/constants';
 
 // Inline social icons components
 function WhatsAppIcon({ size = 20 }: { size?: number }) {
@@ -182,11 +182,39 @@ export default function Footer() {
         </div>
       </div>
 
+      {/* Red MADSJEEZ — backlinks legitimos bidireccionales */}
+      <div className="border-t border-[#2A2A2A]">
+        <div className="content-max-width py-8">
+          <p className="font-body text-[10px] font-medium uppercase tracking-[2px] text-[#3A3A3A] mb-3 text-center">
+            Parte de la red MADSJEEZ
+          </p>
+          <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+            {MADSJEEZ_NETWORK.map((site) => (
+              <li key={site.url}>
+                <a
+                  href={site.url}
+                  rel="me noopener"
+                  target="_blank"
+                  className="font-body text-[11px] text-[#4A4A4A] hover:text-[#D4A574] transition-colors"
+                  title={site.description}
+                >
+                  {site.name}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
       {/* Bottom bar */}
       <div className="border-t border-[#2A2A2A]">
         <div className="content-max-width py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="font-body text-xs text-[#6B6B6B]">
             &copy; 2025 {STORE_NAME}. Todos los derechos reservados.
+            {' '}
+            <a href="https://www.madsjeezdesign.com" rel="me noopener" target="_blank" className="text-[#D4A574] hover:text-white transition-colors">
+              MADSJEEZ Design
+            </a>
           </p>
           <div className="flex items-center gap-2">
             <span className="font-body text-xs text-[#6B6B6B]">MercadoPago</span>
