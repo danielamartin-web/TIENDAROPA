@@ -42,7 +42,7 @@ const defaultSettings: AppSettings = {
   address: 'Buenos Aires, Argentina',
   hours: 'Lunes a Viernes 9:00 - 18:00, Sabados 10:00 - 14:00',
   instagram: 'Marda.0ficial',
-  facebook: 'mardaoficial',
+  facebook: 'profile.php?id=61590784251900',
   tiktok: 'marda.oficial',
   whatsappNumber: '5491139199537',
   metaTitle: 'MARDA - Ropa Interior y Juvenil',
@@ -272,7 +272,7 @@ export default function AdminSettings() {
             value={settings.facebook}
             onChange={(e) => updateField('facebook', e.target.value)}
             className="w-full h-[44px] pl-10 pr-4 bg-[#0F0F0F] border border-[#2A2A2A] rounded-lg text-white font-body text-sm focus:outline-none focus:border-[#6F1219] transition-colors"
-            placeholder="mardaoficial"
+            placeholder="profile.php?id=... o tu vanity name"
           />
         </div>
       </div>

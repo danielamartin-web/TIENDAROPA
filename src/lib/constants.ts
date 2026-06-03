@@ -9,7 +9,7 @@ export const WHATSAPP_MARTIN = '5491139199537';
 export const WHATSAPP_DANIELA = '5491178204224';
 export const DEFAULT_WHATSAPP_NUMBER = WHATSAPP_MARTIN;
 export const DEFAULT_INSTAGRAM = 'Marda.0ficial';
-export const DEFAULT_FACEBOOK = 'mardaoficial';
+export const DEFAULT_FACEBOOK = 'profile.php?id=61590784251900';
 export const DEFAULT_TIKTOK = 'marda.oficial';
 
 // Social URLs
@@ -22,7 +22,7 @@ export const getWhatsAppDanielaUrl = (message?: string) =>
 export const getInstagramUrl = (user: string = DEFAULT_INSTAGRAM) =>
   `https://instagram.com/${user}`;
 export const getFacebookUrl = (page: string = DEFAULT_FACEBOOK) =>
-  `https://facebook.com/${page}`;
+  page.startsWith('http') ? page : `https://www.facebook.com/${page}`;
 export const getTikTokUrl = (user: string = DEFAULT_TIKTOK) =>
   `https://tiktok.com/@${user}`;
 
