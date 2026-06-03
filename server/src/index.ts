@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { env } from './env.js';
 import { pingDb } from './db/client.js';
 import { bootstrapAdmin } from './bootstrap.js';
+import { resolveJwtSecret } from './secret.js';
 import { authRoutes } from './routes/auth.js';
 import { productRoutes } from './routes/products.js';
 import { orderRoutes } from './routes/orders.js';
@@ -95,8 +96,13 @@ async function bootStatic() {
 }
 
 async function main() {
+  // Resolve JWT secret (env > DB persisted > auto-generated). DEBE ser antes de cualquier auth.
+  await resolveJwtSecret().catch((err) => {
+    console.error('[secret] fatal al resolver JWT secret:', err);
+  });
   await bootStatic();
   // Bootstrap admin desde env vars (no-throw: si falla, el server arranca igual).
+  // Opcional ahora — sin env vars, se hace via /api/auth/setup desde el UI.
   await bootstrapAdmin().catch((err) => console.error('[bootstrap] fatal:', err));
   serve({
     fetch: app.fetch,

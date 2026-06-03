@@ -1,7 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose';
-import { env } from '../env.js';
+import { getJwtSecretSync } from '../secret.js';
 
-const SECRET = new TextEncoder().encode(env.JWT_SECRET);
 const ISSUER = 'marda';
 const AUDIENCE = 'marda-admin';
 
@@ -12,6 +11,7 @@ export interface JwtPayload {
 }
 
 export async function signAdminToken(payload: JwtPayload, expiresInSec = 8 * 60 * 60): Promise<string> {
+  const secret = getJwtSecretSync();
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
     .setIssuedAt()
@@ -19,12 +19,13 @@ export async function signAdminToken(payload: JwtPayload, expiresInSec = 8 * 60 
     .setIssuer(ISSUER)
     .setAudience(AUDIENCE)
     .setSubject(payload.sub)
-    .sign(SECRET);
+    .sign(secret);
 }
 
 export async function verifyAdminToken(token: string): Promise<JwtPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, SECRET, {
+    const secret = getJwtSecretSync();
+    const { payload } = await jwtVerify(token, secret, {
       issuer: ISSUER,
       audience: AUDIENCE,
     });

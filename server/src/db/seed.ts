@@ -23,6 +23,10 @@ async function seedAdmin() {
   const username = env.ADMIN_USERNAME;
   const password = env.ADMIN_INITIAL_PASSWORD;
 
+  if (!username) {
+    console.log('[seed] ADMIN_USERNAME not set — skipping admin seed (usar /api/auth/setup desde el UI)');
+    return;
+  }
   if (!password) {
     console.log('[seed] ADMIN_INITIAL_PASSWORD not set — skipping admin seed');
     return;

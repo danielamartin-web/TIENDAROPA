@@ -24,7 +24,67 @@ const changePasswordSchema = z
     path: ['confirmPassword'],
   });
 
+const setupSchema = z
+  .object({
+    username: z.string().min(3).max(64).regex(/^[a-zA-Z0-9._-]+$/, 'username_invalid_chars'),
+    password: z.string().min(8).max(200),
+    confirmPassword: z.string().min(8).max(200),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: 'passwords_do_not_match',
+    path: ['confirmPassword'],
+  });
+
+async function adminCount(): Promise<number> {
+  const rows = await db.select().from(admins).limit(1);
+  return rows.length;
+}
+
 export const authRoutes = new Hono();
+
+// Estado del setup: necesita crear el primer admin?
+authRoutes.get('/setup-status', async (c) => {
+  try {
+    const count = await adminCount();
+    return c.json({ adminExists: count > 0 });
+  } catch {
+    return c.json({ adminExists: false, dbError: true }, 503);
+  }
+});
+
+// Crear el PRIMER admin. Solo funciona si la tabla esta vacia.
+authRoutes.post(
+  '/setup',
+  rateLimit({ windowMs: 60_000, max: 5, keyPrefix: 'setup' }),
+  async (c) => {
+    const existingCount = await adminCount();
+    if (existingCount > 0) {
+      return c.json({ error: 'setup_already_completed' }, 403);
+    }
+
+    const body = await c.req.json().catch(() => null);
+    const parsed = setupSchema.safeParse(body);
+    if (!parsed.success) {
+      const msg = parsed.error.issues[0]?.message ?? 'invalid_payload';
+      return c.json({ error: msg }, 400);
+    }
+
+    const hash = await hashPassword(parsed.data.password);
+    const [created] = await db
+      .insert(admins)
+      .values({ username: parsed.data.username, passwordHash: hash, role: 'admin' })
+      .returning();
+
+    const token = await signAdminToken({
+      sub: String(created.id),
+      username: created.username,
+      role: 'admin',
+    });
+
+    console.log(`[setup] primer admin "${created.username}" creado via setup flow`);
+    return c.json({ token, username: created.username }, 201);
+  }
+);
 
 authRoutes.post(
   '/login',

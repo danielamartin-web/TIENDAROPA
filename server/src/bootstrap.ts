@@ -14,6 +14,14 @@ import { hashPassword } from './utils/hash.js';
 export async function bootstrapAdmin(): Promise<void> {
   const username = env.ADMIN_USERNAME;
 
+  // Sin username, no hay bootstrap via env vars; usar setup flow desde UI.
+  if (!username) {
+    if (env.ADMIN_INITIAL_PASSWORD || env.ADMIN_RESET_PASSWORD) {
+      console.warn('[bootstrap] ADMIN_INITIAL_PASSWORD/ADMIN_RESET_PASSWORD ignorados — falta ADMIN_USERNAME');
+    }
+    return;
+  }
+
   // ADMIN_RESET_PASSWORD tiene prioridad — fuerza upsert.
   if (env.ADMIN_RESET_PASSWORD) {
     try {
