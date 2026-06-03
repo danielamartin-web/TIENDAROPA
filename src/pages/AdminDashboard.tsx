@@ -11,8 +11,8 @@ import {
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import StatCard from '@/components/admin/StatCard';
-import { useProductStore } from '@/store/productStore';
-import { useOrderStore } from '@/store/orderStore';
+import { useProducts } from '@/lib/hooks/useProducts';
+import { useAdminOrders } from '@/lib/hooks/useOrders';
 import { getLast7DaysSales, getTodayDateString, formatPrice, getStatusLabel, getStatusColorClasses } from '@/lib/adminUtils';
 import {
   BarChart,
@@ -25,8 +25,8 @@ import {
 } from 'recharts';
 
 export default function AdminDashboard() {
-  const products = useProductStore((s) => s.products);
-  const orders = useOrderStore((s) => s.orders);
+  const { products } = useProducts();
+  const { orders } = useAdminOrders();
   const salesData = getLast7DaysSales();
 
   const totalProducts = products.length;
@@ -35,21 +35,13 @@ export default function AdminDashboard() {
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
-  function parseOrderDate(o: { createdAtISO?: string; createdAt: string }): number {
-    if (o.createdAtISO) {
-      const t = Date.parse(o.createdAtISO);
-      if (!Number.isNaN(t)) return t;
-    }
-    const m = o.createdAt.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
-    if (m) {
-      const [, dd, mm, yyyy, hh = '0', mi = '0'] = m;
-      return new Date(+yyyy, +mm - 1, +dd, +hh, +mi).getTime();
-    }
-    return 0;
-  }
+  const parseOrderDate = (iso: string): number => {
+    const t = Date.parse(iso);
+    return Number.isNaN(t) ? 0 : t;
+  };
 
-  const todayOrders = orders.filter((o) => parseOrderDate(o) >= startOfToday).length;
-  const monthOrders = orders.filter((o) => parseOrderDate(o) >= startOfMonth).length;
+  const todayOrders = orders.filter((o) => parseOrderDate(o.createdAt) >= startOfToday).length;
+  const monthOrders = orders.filter((o) => parseOrderDate(o.createdAt) >= startOfMonth).length;
   const estimatedRevenue = orders.reduce((sum, o) => sum + o.total, 0);
 
   const lowStockProducts = products.filter((p) => p.sizes.length < 3 || p.badge === '-20%').slice(0, 4);

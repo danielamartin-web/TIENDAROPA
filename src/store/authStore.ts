@@ -113,7 +113,13 @@ export const useAuthStore = create<AuthState>()(
         tokenExpiresAt: state.tokenExpiresAt,
       }),
       onRehydrateStorage: () => (state) => {
-        if (state && state.tokenExpiresAt && isExpired(state.tokenExpiresAt)) {
+        if (!state) return;
+        // Limpia sesion legacy (sin tokenExpiresAt) o expirada.
+        // Sesion legacy = isAuthenticated=true pero sin tokenExpiresAt → token viejo (btoa pre-PR1)
+        // o sesion sin expiracion definida — en cualquier caso, no confiable.
+        const tokenExpired = state.tokenExpiresAt && isExpired(state.tokenExpiresAt);
+        const legacyAdminSession = state.isAdmin && !state.tokenExpiresAt;
+        if (tokenExpired || legacyAdminSession) {
           state.logout();
         }
       },

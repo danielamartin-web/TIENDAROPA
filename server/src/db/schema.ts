@@ -25,6 +25,7 @@ export const products = pgTable(
     originalPrice: integer('original_price'),
     category: varchar('category', { length: 32 }).notNull(),
     sizes: jsonb('sizes').$type<string[]>().notNull().default([]),
+    stockBySize: jsonb('stock_by_size').$type<Record<string, number>>().notNull().default({}),
     images: jsonb('images').$type<string[]>().notNull().default([]),
     video: text('video'),
     inStock: boolean('in_stock').notNull().default(true),

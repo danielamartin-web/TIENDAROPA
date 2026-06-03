@@ -16,7 +16,8 @@ import {
   Play,
 } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
-import { getProductById, products } from '@/data/products';
+import { getProductById, products as staticProducts } from '@/data/products';
+import { useProduct, useProducts } from '@/lib/hooks/useProducts';
 import { formatPrice, DEFAULT_WHATSAPP_NUMBER, SITE_URL } from '@/lib/constants';
 import SEO from '@/components/SEO';
 import {
@@ -89,7 +90,7 @@ function buildProductSchema(opts: {
 }
 
 /* ─── Related Product Card ─── */
-function RelatedCard({ product }: { product: (typeof products)[0] }) {
+function RelatedCard({ product }: { product: import('@/data/products').Product }) {
   return (
     <Link to={`/product/${product.id}`} className="group block">
       <div className="aspect-[3/4] overflow-hidden bg-[#F0F0F0] border border-[#F0F0F0] mb-3">
@@ -123,7 +124,12 @@ function RelatedCard({ product }: { product: (typeof products)[0] }) {
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const productId = Number(id);
-  const product = getProductById(productId);
+  const staticFallback = getProductById(productId);
+  const { product, loading: productLoading } = useProduct(
+    Number.isFinite(productId) ? productId : null,
+    staticFallback ?? null
+  );
+  const { products: allProducts } = useProducts({ initialData: staticProducts, keepStaleOnError: true });
 
   const addItem = useCartStore((s) => s.addItem);
 
@@ -169,6 +175,16 @@ export default function ProductDetail() {
     };
   }, [productId]);
 
+  // Clamp quantity to stock when size changes
+  useEffect(() => {
+    if (!product || !selectedSize) return;
+    const sizeStock = product.stockBySize?.[selectedSize];
+    if (sizeStock !== undefined && quantity > sizeStock) {
+      setQuantity(Math.max(1, sizeStock));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSize, product?.id]);
+
 
   // Keyboard navigation for images
   useEffect(() => {
@@ -197,15 +213,24 @@ export default function ProductDetail() {
 
   const relatedProducts = useMemo(() => {
     if (!product) return [];
-    return products
+    return allProducts
       .filter((p) => p.category === product.category && p.id !== product.id)
       .slice(0, 4);
-  }, [product]);
+  }, [product, allProducts]);
 
   // ── Handlers ──
   const handleAddToCart = () => {
     if (!product || !selectedSize) {
       toast.error('Selecciona una talla primero');
+      return;
+    }
+    const sizeStock = product.stockBySize?.[selectedSize];
+    if (sizeStock !== undefined && sizeStock <= 0) {
+      toast.error('Talle sin stock');
+      return;
+    }
+    if (sizeStock !== undefined && quantity > sizeStock) {
+      toast.error(`Solo hay ${sizeStock} disponible(s) para ese talle`);
       return;
     }
     addItem({
@@ -215,6 +240,7 @@ export default function ProductDetail() {
       size: selectedSize,
       image: product.images[0],
       quantity,
+      maxStock: sizeStock,
     });
     setAddedToCart(true);
     toast.success(`${product.name} agregado al carrito`, {
@@ -275,7 +301,17 @@ export default function ProductDetail() {
     setCurrentImageIndex((i) => (i > 0 ? i - 1 : allMedia.length - 1));
   };
 
-  // ── Not found state ──
+  if (productLoading && !product) {
+    return (
+      <div className="pt-[72px] min-h-[100dvh] flex items-center justify-center bg-[#FAFAFA]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-[#6F1219] border-t-transparent rounded-full animate-spin" />
+          <p className="font-body text-xs text-[#6B6B6B] uppercase tracking-[2px]">Cargando</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!product) {
     return (
       <div className="pt-[72px] min-h-[100dvh] flex items-center justify-center">
@@ -590,22 +626,38 @@ export default function ProductDetail() {
               <div className="flex flex-wrap gap-2">
                 {product.sizes.map((size) => {
                   const isSelected = selectedSize === size;
+                  const stock = product.stockBySize?.[size];
+                  const hasStockTracking = product.stockBySize && Object.keys(product.stockBySize).length > 0;
+                  const isOutOfStock = hasStockTracking && (stock ?? 0) <= 0;
                   return (
                     <button
                       key={size}
-                      onClick={() => setSelectedSize(size)}
+                      onClick={() => !isOutOfStock && setSelectedSize(size)}
+                      disabled={isOutOfStock}
                       className={cn(
                         'min-w-[52px] h-[44px] px-4 rounded-full border font-body text-[14px] font-medium transition-all duration-200',
-                        isSelected
+                        isOutOfStock
+                          ? 'bg-[#F5F5F5] text-[#C5C5C5] border-[#E5E5E5] cursor-not-allowed line-through'
+                          : isSelected
                           ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
                           : 'bg-transparent text-[#1A1A1A] border-[#E5E5E5] hover:border-[#1A1A1A]'
                       )}
+                      title={isOutOfStock ? 'Sin stock' : undefined}
                     >
                       {size}
                     </button>
                   );
                 })}
               </div>
+              {selectedSize && product.stockBySize?.[selectedSize] !== undefined && (
+                <p className={`font-body text-[12px] mt-2 ${
+                  (product.stockBySize[selectedSize] ?? 0) <= 3 ? 'text-[#F59E0B]' : 'text-[#6B6B6B]'
+                }`}>
+                  {(product.stockBySize[selectedSize] ?? 0) <= 3
+                    ? `Solo ${product.stockBySize[selectedSize]} disponible(s)`
+                    : `${product.stockBySize[selectedSize]} disponibles`}
+                </p>
+              )}
               {!selectedSize && (
                 <p className="font-body text-[12px] text-[#EF4444] mt-2">
                   Selecciona una talla para continuar
@@ -630,8 +682,17 @@ export default function ProductDetail() {
                   {quantity}
                 </span>
                 <button
-                  onClick={() => setQuantity((q) => Math.min(10, q + 1))}
-                  className="w-11 h-11 flex items-center justify-center text-[#1A1A1A] hover:bg-[#F5F5F5] transition-colors"
+                  onClick={() => {
+                    const sizeStock = selectedSize ? product.stockBySize?.[selectedSize] : undefined;
+                    const maxQty = sizeStock !== undefined ? Math.min(10, sizeStock) : 10;
+                    setQuantity((q) => Math.min(maxQty, q + 1));
+                  }}
+                  disabled={(() => {
+                    const sizeStock = selectedSize ? product.stockBySize?.[selectedSize] : undefined;
+                    const maxQty = sizeStock !== undefined ? Math.min(10, sizeStock) : 10;
+                    return quantity >= maxQty;
+                  })()}
+                  className="w-11 h-11 flex items-center justify-center text-[#1A1A1A] hover:bg-[#F5F5F5] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   aria-label="Aumentar cantidad"
                 >
                   <Plus size={16} />

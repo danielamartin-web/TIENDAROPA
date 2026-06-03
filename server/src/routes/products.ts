@@ -14,6 +14,7 @@ const productInput = z.object({
   originalPrice: z.number().int().nonnegative().nullable().optional(),
   category: z.enum(CATEGORIES),
   sizes: z.array(z.string().min(1).max(16)).max(20).default([]),
+  stockBySize: z.record(z.string().min(1).max(16), z.number().int().min(0).max(100000)).default({}),
   images: z.array(z.string().url().or(z.string().startsWith('/'))).max(10).default([]),
   video: z.string().url().nullable().optional(),
   inStock: z.boolean().default(true),

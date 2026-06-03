@@ -14,6 +14,7 @@ import { authRoutes } from './routes/auth.js';
 import { productRoutes } from './routes/products.js';
 import { orderRoutes } from './routes/orders.js';
 import { newsletterRoutes } from './routes/newsletter.js';
+import { settingsRoutes } from './routes/settings.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATIC_DIR = path.resolve(__dirname, env.STATIC_DIR);
@@ -48,6 +49,7 @@ app.route('/api/auth', authRoutes);
 app.route('/api/products', productRoutes);
 app.route('/api/orders', orderRoutes);
 app.route('/api/newsletter', newsletterRoutes);
+app.route('/api/settings', settingsRoutes);
 
 app.notFound((c) => {
   if (c.req.path.startsWith('/api')) {

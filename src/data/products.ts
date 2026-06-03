@@ -8,10 +8,15 @@ export interface Product {
   originalPrice: number | null;
   category: Category;
   sizes: string[];
+  /**
+   * Stock por talle. Si vacio o sin talle, se asume sin limite (usar inStock flag).
+   * Si una key existe con valor 0, esa talle esta agotada.
+   */
+  stockBySize?: Record<string, number>;
   images: string[];
-  video?: string;
+  video?: string | null;
   inStock: boolean;
-  badge?: string;
+  badge?: string | null;
 }
 
 export const products: Product[] = [

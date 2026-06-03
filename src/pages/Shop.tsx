@@ -5,8 +5,10 @@ import { useShopStore } from '@/store/shopStore';
 import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/lib/constants';
 import type { Product } from '@/data/products';
+import { products as staticProducts } from '@/data/products';
 import type { Category } from '@/lib/constants';
 import SEO from '@/components/SEO';
+import { useProducts } from '@/lib/hooks/useProducts';
 
 const CATEGORY_SEO: Record<string, { title: string; description: string }> = {
   todos: {
@@ -397,6 +399,13 @@ export default function Shop() {
   const toggleSize = useShopStore((s) => s.toggleSize);
   const clearFilters = useShopStore((s) => s.clearFilters);
   const getFilteredProducts = useShopStore((s) => s.getFilteredProducts);
+  const setAllProducts = useShopStore((s) => s.setAllProducts);
+
+  const { products: apiProducts } = useProducts({ initialData: staticProducts, keepStaleOnError: true });
+
+  useEffect(() => {
+    if (apiProducts.length > 0) setAllProducts(apiProducts);
+  }, [apiProducts, setAllProducts]);
 
   const [sortValue, setSortValue] = useState<SortValue>('relevant');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
